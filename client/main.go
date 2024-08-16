@@ -14,18 +14,18 @@ type Websocket struct {
 }
 
 func main() {
+	// Get sharedArray
+	sharedArray := js.Global().Get("sharedArray")
+
+	// Run game tick
+	logic.LogicLoop(sharedArray)
+
 	// Listen to user input
 	input := userinput.New()
 	defer input.Close()
 
-	// Get sharedArray
-	sharedArray := js.Global().Get("sharedArray")
-
 	// Connect to server
 	comms.New()
-
-	// Run game tick
-	logic.LogicLoop(sharedArray)
 
 	// Wait forever
 	select {}

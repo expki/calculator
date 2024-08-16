@@ -122,20 +122,22 @@ func Encode(data any) (encoded []byte) {
 func arrayValue(item any) []byte {
 	itemBytes := Encode(item)
 	itemLen := uint32(len(itemBytes))
-	itemLenBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(itemLenBytes, itemLen)
-	return append(itemLenBytes, itemBytes...)
+	bytes := make([]byte, 4+itemLen)
+	binary.LittleEndian.PutUint32(bytes[0:4], itemLen)
+	copy(bytes[4:4+itemLen], itemBytes)
+	return bytes
 }
 
 func objValue(key string, value any) []byte {
+	raw := Encode(value)
+	rawLen := uint32(len(raw))
 	keyLen := uint32(len(key))
-	keyBytes := make([]byte, 5+keyLen)
-	keyBytes[0] = byte(Type_int32)
-	binary.LittleEndian.PutUint32(keyBytes[1:5], keyLen)
-	copy(keyBytes[5:], key)
-	valueBytes := Encode(value)
-	valueLen := uint32(len(valueBytes))
-	valueLenBytes := make([]byte, 4)
-	binary.LittleEndian.PutUint32(valueLenBytes, valueLen)
-	return append(append(keyBytes, valueLenBytes...), valueBytes...)
+	bytes := make([]byte, 8+keyLen+rawLen)
+	// key
+	binary.LittleEndian.PutUint32(bytes[0:4], keyLen)
+	copy(bytes[4:4+keyLen], key)
+	// value
+	binary.LittleEndian.PutUint32(bytes[4+keyLen:8+keyLen], rawLen)
+	copy(bytes[8+keyLen:8+keyLen+rawLen], raw)
+	return bytes
 }

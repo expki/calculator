@@ -15,6 +15,8 @@ enum Type {
 export function Decode<T = any>(binary: Uint8Array): T {
     let output: any = undefined;
     switch (binary[0]) {
+        case Type.null:
+            output = null;
         case Type.bool: {
             output = Boolean(binary[1]);
             break;
@@ -61,12 +63,12 @@ export function Decode<T = any>(binary: Uint8Array): T {
             const maxLength = new DataView(binary.buffer).getUint32(1, true);
             let offset = 5;
             while (offset < maxLength + 5) {
-                const keyLength = new DataView(binary.buffer).getUint32(offset + 1, true);
-                const key = new TextDecoder().decode(binary.slice(offset + 5, offset + 5 + keyLength));
-                const valueLength = new DataView(binary.buffer).getUint32(offset + 5 + keyLength, true);
-                const value = Decode(binary.slice(offset + 9 + keyLength, offset + 9 + keyLength + valueLength));
-                obj[key] = value;
-                offset += 9 + keyLength + valueLength;
+                const keyLength = new DataView(binary.buffer).getUint32(offset, true);
+                const key = new TextDecoder().decode(binary.slice(offset + 4, offset + 4 + keyLength));
+                offset += 4 + keyLength;
+                const valueLength = new DataView(binary.buffer).getUint32(offset, true);
+                obj[key] = Decode(binary.slice(offset + 4, offset + 4 + valueLength));
+                offset += 4 + valueLength;
             }
             output = obj;
             break;
