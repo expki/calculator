@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "allowSyntheticDefaultImports": true,
+    "noImplicitAny": true,
+    "module": "ESNext",
+    "target": "es2020",
+    "allowJs": false
+  },
+  "files": ["src/index.ts"]
+}

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+	<title>Go WebAssembly - Plot</title>
+	<meta name="author" content="Mark Farnan" />
+	<meta name="description" content="Prototype PLotter with GO, Canvas and WebAssembly" />
+	<meta name="theme-color" content="#000000" />
+	<meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent scrollbars */
+        }
+        canvas {
+            display: block; /* Remove inline-block space */
+            image-rendering: pixelated; /* Pixelated rendering */
+        }
+    </style>
+</head>
+<body>
+    <canvas id="main"></canvas>
+    <script src="wasm_exec.js"></script>
+</body>
+</html>
