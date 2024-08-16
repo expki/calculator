@@ -1,0 +1,5 @@
+config.json
+server
+
+public/*
+!public/public.go

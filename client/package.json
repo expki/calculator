@@ -4,9 +4,9 @@
   "description": "calculator web client",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "cp $(go env GOROOT)/misc/wasm/wasm_exec.js public/ && cp public/wasm_exec.js dist/ && GOOS=js GOARCH=wasm go build -ldflags=\"-X 'main.port=8001'\" -o dist/logic.wasm . && webpack-dev-server --open",
+    "dev": "cp $(go env GOROOT)/misc/wasm/wasm_exec.js public/wasm_exec.js && cp public/wasm_exec.js dist/wasm_exec.js && GOOS=js GOARCH=wasm go build -ldflags=\"-X 'main.port=8001'\" -o dist/logic.wasm . && webpack-dev-server --open",
     "test": "echo \"Error: no tests\" && exit 0",
-    "build": "webpack --mode=production --node-env=production && cp $(go env GOROOT)/misc/wasm/wasm_exec.js public/ && GOOS=js GOARCH=wasm go build -trimpath -ldflags=\"-s -w\" -o dist/logic.wasm ."
+    "build": "webpack --mode=production --node-env=production && cp public/wasm_exec.js dist/wasm_exec.js && GOOS=js GOARCH=wasm go build -trimpath -ldflags=\"-s -w\" -o dist/logic.wasm ."
   },
   "repository": {
     "type": "git",

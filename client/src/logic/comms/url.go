@@ -29,5 +29,6 @@ func getWebsocketURL() (string, error) {
 	default:
 		return "", fmt.Errorf("unsupported scheme: %q", uri.Scheme)
 	}
+	uri.Path = "session"
 	return uri.String(), nil
 }
