@@ -1,7 +1,6 @@
 package game
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gorilla/websocket"
@@ -30,28 +29,8 @@ func (g *Game) UpgradeHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	// Handle the WebSocket connection
-	g.session(conn)
-}
-
-// session handles a single websocket connection
-func (g *Game) session(conn *websocket.Conn) {
-	defer conn.Close()
-
-	for {
-		// Read message from browser
-		mt, message, err := conn.ReadMessage()
-		if err != nil {
-			g.sugar.Error("Read error:", err)
-			break // Exit the loop on error
-		}
-
-		// Print the message to the console
-		fmt.Printf("Received: %s\n", message)
-
-		// Write message back to browser
-		if err := conn.WriteMessage(mt, message); err != nil {
-			g.sugar.Error("Write error:", err)
-			break // Exit the loop on error
-		}
+	err = NewSession(g.logger, g.sugar, conn).Wait()
+	if err != nil {
+		g.sugar.Errorf("Session closed with error: %v", err)
 	}
 }
