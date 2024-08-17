@@ -3,4 +3,4 @@ dist/*
 
 *.js
 !public/wasm_exec.js
-!webpack.config.js
+!*.config.js
