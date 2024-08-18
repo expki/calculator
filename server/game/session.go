@@ -43,7 +43,15 @@ func (s *Session) Wait() error {
 
 // handleInput handles client inputs
 func (g *Session) handleInput(conn *websocket.Conn) {
-	defer conn.Close()
+	defer func() {
+		select {
+		case <-g.done:
+			return
+		default:
+			close(g.done)
+		}
+		conn.Close()
+	}()
 	for {
 		// Read message from browser
 		mt, message, err := conn.ReadMessage()
@@ -72,7 +80,15 @@ func (g *Session) handleInput(conn *websocket.Conn) {
 
 // handleOutput keeps the client up to date with latest state
 func (g *Session) handleOutput(conn *websocket.Conn) {
-	defer conn.Close()
+	defer func() {
+		select {
+		case <-g.done:
+			return
+		default:
+			close(g.done)
+		}
+		conn.Close()
+	}()
 	var lastEncodedState []byte
 	for {
 		start := time.Now()
