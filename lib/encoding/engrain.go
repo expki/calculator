@@ -2,7 +2,6 @@ package encoding
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 )
 
@@ -24,7 +23,6 @@ func Engrain(data map[string]any, dst any) (err error) {
 	// engrain data into dst
 	for key, value := range data {
 		field := dstStruct.FieldByName(key)
-		fmt.Println(key, value)
 		if !field.IsValid() {
 			continue
 		}
@@ -60,11 +58,9 @@ func Engrain(data map[string]any, dst any) (err error) {
 			}
 			for idx := 0; idx < reflect.ValueOf(value).Len(); idx++ {
 				itemStruct := reflect.New(field.Type().Elem().Elem()).Elem()
-				fmt.Println(key, idx, itemStruct)
 				if err = Engrain(reflect.ValueOf(value).Index(idx).Interface().(map[string]any), itemStruct.Addr().Interface()); err != nil {
 					return err
 				}
-				fmt.Println(key, idx, reflect.ValueOf(value).Index(idx))
 				ptrValue := reflect.New(itemStruct.Type())
 				ptrValue.Elem().Set(itemStruct)
 				slice = reflect.Append(slice, ptrValue)

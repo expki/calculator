@@ -1,5 +1,6 @@
 import { Decode } from './decoder';
 import { renderCalculator } from './calculator';
+import { renderCursor } from './cursor';
 import type * as state from '../types/state';
 
 const target_tick_rate = 1000 / 60
@@ -44,6 +45,9 @@ async function renderLoop(): Promise<void> {
 
         // Draw calculator
         renderCalculator(ctx, canvas, state.Global.Calculator, xCenter, yCenter);
+
+        // Draw cursor
+        (state.Global.Members ?? []).forEach((member) => renderCursor(ctx, canvas, member))
 
         // Calculate render time
         const end = performance.now() - start;

@@ -17,7 +17,6 @@ func getWebsocketURL(port string) (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("strconv.Atoi alt port: %v", err)
 		}
-		fmt.Println("Using alt port:", wsPort)
 		uri.Host = fmt.Sprintf("%s:%d", uri.Hostname(), wsPort)
 	}
 	switch uri.Scheme {
