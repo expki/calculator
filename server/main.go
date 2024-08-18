@@ -119,7 +119,7 @@ func main() {
 				return
 			}
 			w.Header().Set("Content-Encoding", "zstd")
-			encoder, err := zstd.NewWriter(w, zstd.WithEncoderLevel(zstd.SpeedBestCompression))
+			encoder, err := zstd.NewWriter(w, zstd.WithEncoderLevel(zstd.SpeedFastest))
 			if err != nil {
 				sugar.Errorf("Failed to create zstd encoder: %v", err)
 				h.ServeHTTP(w, r)
