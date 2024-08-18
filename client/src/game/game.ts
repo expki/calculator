@@ -48,6 +48,10 @@ async function renderLoop(): Promise<void> {
         // Calculate render time
         const end = performance.now() - start;
         pref[n%60] = end / target_tick_rate;
+
+        if (n % 120 === 0) {
+            console.log(state);
+        }
     } catch(e) {
         console.error(e);
     } finally {

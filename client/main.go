@@ -28,7 +28,7 @@ func main() {
 	defer input.Close()
 
 	// Connect to server
-	cms := comms.New(port, lgc)
+	cms := comms.New(port, lgc, input)
 	defer cms.Close()
 
 	// Wait forever

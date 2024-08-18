@@ -1,6 +1,7 @@
 package game
 
 import (
+	"bytes"
 	"fmt"
 	"time"
 
@@ -55,25 +56,39 @@ func (g *Session) handleInput(conn *websocket.Conn) {
 		case websocket.BinaryMessage:
 			// Decode the message
 			data, _ := encoding.Decode(message)
-			fmt.Println(data)
+			var userIn schema.Input
+			err = encoding.Engrain(data.(map[string]any), userIn)
+			if err != nil {
+				g.sugar.Errorf("Decode client message")
+				continue
+			}
+			me := g.state.GetMember(g.Id.String())
+			me.SetX(userIn.X)
+			me.SetY(userIn.Y)
 		default:
 			g.sugar.Errorf("Invalid message type: %d", mt)
 		}
+		fmt.Printf("state: %+v\n", g.state)
 	}
 }
 
 // handleOutput keeps the client up to date with latest state
 func (g *Session) handleOutput(conn *websocket.Conn) {
 	defer conn.Close()
+	var lastEncodedState []byte
 	for {
 		start := time.Now()
 		// Encode state
 		encodedState := encoding.Encode(g.state)
-		//Send the state to the client
-		if err := conn.WriteMessage(websocket.BinaryMessage, encodedState); err != nil {
-			g.sugar.Error("Write error:", err)
-			break
+		if !bytes.Equal(encodedState, lastEncodedState) {
+			//Send the state to the client
+			if err := conn.WriteMessage(websocket.BinaryMessage, encodedState); err != nil {
+				g.sugar.Error("Write error:", err)
+				break
+			}
+			lastEncodedState = encodedState
 		}
+
 		end := time.Since(start)
 		if end < tick_rate {
 			time.Sleep(tick_rate - end)
