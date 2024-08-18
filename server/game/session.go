@@ -2,7 +2,6 @@ package game
 
 import (
 	"bytes"
-	"fmt"
 	"time"
 
 	"github.com/expki/calculator/lib/encoding"
@@ -57,7 +56,7 @@ func (g *Session) handleInput(conn *websocket.Conn) {
 			// Decode the message
 			data, _ := encoding.Decode(message)
 			var userIn schema.Input
-			err = encoding.Engrain(data.(map[string]any), userIn)
+			err = encoding.Engrain(data.(map[string]any), &userIn)
 			if err != nil {
 				g.sugar.Errorf("Decode client message")
 				continue
@@ -68,7 +67,6 @@ func (g *Session) handleInput(conn *websocket.Conn) {
 		default:
 			g.sugar.Errorf("Invalid message type: %d", mt)
 		}
-		fmt.Printf("state: %+v\n", g.state)
 	}
 }
 
