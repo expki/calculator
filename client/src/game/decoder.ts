@@ -19,6 +19,7 @@ export function Decode<T = any>(binary: Uint8Array): [T, number] {
         case Type.null:
             output = null;
             outputLength = 1;
+            break;
         case Type.bool: {
             output = Boolean(binary[1]);
             outputLength = 2;
@@ -57,33 +58,44 @@ export function Decode<T = any>(binary: Uint8Array): [T, number] {
             break;
         }
         case Type.array: {
-            const array = new Array(new DataView(binary.buffer).getUint32(1, true));
+            const length = new DataView(binary.buffer).getUint32(1, true);
+            const array = new Array(length);
             let offset = 5;
-            for (let idx = 0; idx < array.length; idx++) {
-                const [value, valueLength] = Decode(binary.slice(offset));
-                array[idx] = value;
+            let valueLength = 0;
+            for (let idx = 0; idx < length; idx++) {
+                [array[idx], valueLength] = Decode(binary.slice(offset));
+                if (valueLength == 0) {
+                    throw new Error(`unable to decode array item ${idx}`);
+                }
                 offset += valueLength;
             }
             output = array;
+            outputLength = offset;
             break;
         }
         case Type.object: {
             const obj: Record<string, unknown> = {};
-            const maxLength = new DataView(binary.buffer).getUint32(1, true);
+            const count = new DataView(binary.buffer).getUint32(1, true);
             let offset = 5;
-            for (let idx = 0; idx < maxLength; idx++) {
+            let valueLength = 0;
+            for (let idx = 0; idx < count; idx++) {
                 const keyLength = new DataView(binary.buffer).getUint32(offset, true);
                 offset += 4;
                 const key = new TextDecoder().decode(binary.slice(offset, offset + keyLength));
                 offset += keyLength;
-                const [value, valueLength] = Decode(binary.slice(offset));
-                obj[key] = value;
+                [obj[key], valueLength] = Decode(binary.slice(offset));
+                if (valueLength == 0) {
+                    throw new Error(`unable to decode object item ${key}`);
+                }
                 offset += valueLength;
             }
             output = obj;
+            outputLength = offset;
             break;
         }
         default:
+            output = null;
+            outputLength = 0;
             break;
     }
     return [output as T, outputLength];
