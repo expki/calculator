@@ -2,82 +2,96 @@ package encoding
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math"
 	"reflect"
 )
 
-// Decode implements a custom decoding scheme for the wasm worker
-func Decode(encoded []byte) (data any) {
+// Decode ...
+func Decode(encoded []byte) (data any, length int) {
 	typeByte := encoded[0]
 	switch Type(typeByte) {
 	case Type_null:
-		return nil
+		return nil, 1
 	case Type_bool:
-		return encoded[1] == 1
+		return encoded[1] == 1, 2
 	case Type_uint8:
-		return int(encoded[1])
+		return int(encoded[1]), 2
 	case Type_int32:
-		return int(binary.LittleEndian.Uint32(encoded[1:5]))
+		if encoded[1] >= 128 {
+			clone := make([]byte, 4)
+			copy(clone, encoded[1:5])
+			clone[0] ^= 128
+			return -int(binary.LittleEndian.Uint32(clone)), 5
+		}
+		return int(binary.LittleEndian.Uint32(encoded[1:5])), 5
 	case Type_int64:
-		return int(binary.LittleEndian.Uint64(encoded[1:9]))
+		if encoded[1] >= 128 {
+			clone := make([]byte, 8)
+			copy(clone, encoded[1:9])
+			clone[0] ^= 128
+			return -int(binary.LittleEndian.Uint64(clone)), 9
+		}
+		return int(binary.LittleEndian.Uint64(encoded[1:9])), 9
 	case Type_float32:
-		return math.Float32frombits(binary.LittleEndian.Uint32(encoded[1:5]))
+		return math.Float32frombits(binary.LittleEndian.Uint32(encoded[1:5])), 5
 	case Type_buffer:
 		length := int(binary.LittleEndian.Uint32(encoded[1:5]))
-		return encoded[5 : 5+length]
+		return encoded[5 : 5+length], 5 + length
 	case Type_string:
 		length := int(binary.LittleEndian.Uint32(encoded[1:5]))
-		return string(encoded[5 : 5+length])
+		return string(encoded[5 : 5+length]), 5 + length
 	case Type_array:
 		length := int(binary.LittleEndian.Uint32(encoded[1:5]))
 		array := make([]any, length)
 		offset := 5
+		var valueLength int
 		for idx := 0; idx < length; idx++ {
-			valueLength := int(binary.LittleEndian.Uint32(encoded[offset : offset+4]))
-			array[idx] = Decode(encoded[offset+4 : offset+4+valueLength])
-			offset += valueLength + 4
+			array[idx], valueLength = Decode(encoded[offset:])
+			if valueLength == 0 {
+				panic(fmt.Errorf("unable to decode array item %d", idx))
+			}
+			offset += valueLength
 		}
-		return array
+		return setSliceType(array), offset
 	case Type_object:
 		obj := make(map[string]any)
-		maxLength := int(binary.LittleEndian.Uint32(encoded[1:5]))
+		count := int(binary.LittleEndian.Uint32(encoded[1:5]))
 		offset := 5
-		for offset < maxLength+5 {
+		var valueLength int
+		for idx := 0; idx < count; idx++ {
 			keyLength := int(binary.LittleEndian.Uint32(encoded[offset : offset+4]))
-			key := string(encoded[offset+4 : offset+4+keyLength])
-			offset += keyLength + 4
-			valueLength := int(binary.LittleEndian.Uint32(encoded[offset : offset+4]))
-			obj[key] = Decode(encoded[offset+4 : offset+4+valueLength])
-			offset += 4 + valueLength
+			offset += 4
+			key := string(encoded[offset : offset+keyLength])
+			offset += keyLength
+			obj[key], valueLength = Decode(encoded[offset:])
+			if valueLength == 0 {
+				panic(fmt.Errorf("unable to decode object item %s", key))
+			}
+			offset += valueLength
 		}
-		return obj
+		return obj, offset
 	default:
-		return nil
+		return nil, 0
 	}
 }
 
-// DecodeIntoStruct implements a custom decoding scheme for the wasm worker
-func DecodeIntoStruct(encoded []byte, dst any) (rest any) {
-	if reflect.TypeOf(dst).Kind() != reflect.Ptr {
-		panic("dst must be a pointer")
+func setSliceType(unknown []any) (known any) {
+	// Compatible with any slice type
+	if len(unknown) == 0 {
+		return nil
 	}
-	dstStruct := reflect.ValueOf(dst).Elem()
-	typeByte := encoded[0]
-	switch Type(typeByte) {
-	case Type_object:
-		obj := make(map[string]any)
-		maxLength := int(binary.LittleEndian.Uint32(encoded[1:5]))
-		offset := 5
-		for offset < maxLength+5 {
-			keyLength := int(binary.LittleEndian.Uint32(encoded[offset : offset+4]))
-			key := string(encoded[offset+4 : offset+4+keyLength])
-			offset += keyLength + 4
-			valueLength := int(binary.LittleEndian.Uint32(encoded[offset : offset+4]))
-			dstStruct.FieldByName(key).Set(reflect.ValueOf(Decode(encoded[offset+4 : offset+4+valueLength])))
-			offset += 4 + valueLength
+	// Confirm all has the same type
+	firstType := reflect.TypeOf(unknown[0])
+	for idx := 1; idx < len(unknown); idx++ {
+		if reflect.TypeOf(unknown[idx]) != firstType {
+			return unknown
 		}
-		return obj
-	default:
-		return Decode(encoded)
 	}
+	// Assign all as first type
+	output := reflect.MakeSlice(reflect.SliceOf(firstType), 0, len(unknown))
+	for _, item := range unknown {
+		output = reflect.Append(output, reflect.ValueOf(item))
+	}
+	return output.Interface()
 }

@@ -10,6 +10,8 @@ import (
 func Encode(data any) (encoded []byte) {
 	value := reflect.ValueOf(data)
 	switch value.Kind() {
+	case reflect.Invalid:
+		return []byte{byte(Type_null)}
 	case reflect.Pointer:
 		if value.IsNil() {
 			return []byte{byte(Type_null)}
@@ -21,13 +23,21 @@ func Encode(data any) (encoded []byte) {
 		}
 		return []byte{byte(Type_bool), 0}
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		v := value.Int()
-		if v > math.MaxInt32 || v < math.MinInt32 {
+		var v uint64
+		var isNegative bool
+		vs := value.Int()
+		if vs < 0 {
+			v = uint64(-vs)
+			isNegative = true
+		} else {
+			v = uint64(vs)
+		}
+		if v > math.MaxInt32 {
 			// encode int64
 			encoded = make([]byte, 9)
 			encoded[0] = byte(Type_int64)
-			binary.LittleEndian.PutUint64(encoded[1:], uint64(v))
-		} else if v > math.MaxUint8 || v < 0 {
+			binary.LittleEndian.PutUint64(encoded[1:], v)
+		} else if isNegative || v > math.MaxUint8 {
 			// encode int32
 			encoded = make([]byte, 5)
 			encoded[0] = byte(Type_int32)
@@ -36,14 +46,16 @@ func Encode(data any) (encoded []byte) {
 			// encode uint8
 			encoded = []byte{byte(Type_uint8), byte(v)}
 		}
-		return encoded
+		if isNegative {
+			encoded[1] |= byte(128)
+		}
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 		v := value.Uint()
 		if v > math.MaxInt32 {
 			// encode int64
 			encoded = make([]byte, 9)
 			encoded[0] = byte(Type_int64)
-			binary.LittleEndian.PutUint64(encoded[1:], uint64(v))
+			binary.LittleEndian.PutUint64(encoded[1:], v)
 		} else if v > math.MaxUint8 {
 			// encode int32
 			encoded = make([]byte, 5)
@@ -53,12 +65,10 @@ func Encode(data any) (encoded []byte) {
 			// encode uint8
 			encoded = []byte{byte(Type_uint8), byte(v)}
 		}
-		return encoded
 	case reflect.Float32, reflect.Float64:
 		encoded = make([]byte, 5)
 		encoded[0] = byte(Type_float32)
 		binary.LittleEndian.PutUint32(encoded[1:], math.Float32bits(float32(value.Float())))
-		return encoded
 	case reflect.String:
 		v := value.String()
 		encoded = make([]byte, 5+len(v))
@@ -66,7 +76,6 @@ func Encode(data any) (encoded []byte) {
 		itemLen := uint32(len(v))
 		binary.LittleEndian.PutUint32(encoded[1:5], itemLen)
 		copy(encoded[5:], v)
-		return encoded
 	case reflect.Slice:
 		if value.IsNil() {
 			return []byte{byte(Type_null)}
@@ -84,60 +93,54 @@ func Encode(data any) (encoded []byte) {
 		}
 		encoded = make([]byte, 5)
 		encoded[0] = byte(Type_array)
-		binary.LittleEndian.PutUint32(encoded[1:5], uint32(value.Len()))
-		for i := 0; i < value.Len(); i++ {
-			encoded = append(encoded, arrayValue(value.Index(i).Interface())...)
+		length := value.Len()
+		binary.LittleEndian.PutUint32(encoded[1:5], uint32(length))
+		for i := 0; i < length; i++ {
+			value := value.Index(i).Interface()
+			encodedValue := Encode(value)
+			encoded = append(encoded, encodedValue...)
 		}
-		return encoded
 	case reflect.Struct:
 		objType := value.Type()
 		data := make([]byte, 0)
-		for i := 0; i < value.NumField(); i++ {
-			info := objType.Field(i)
+		var count uint32 = 0
+		for idx := 0; idx < value.NumField(); idx++ {
+			info := objType.Field(idx)
 			if !info.IsExported() {
 				continue
 			}
-			fieldValue := value.Field(i)
-			data = append(data, objValue(info.Name, fieldValue.Interface())...)
+			fieldValue := value.Field(idx).Interface()
+			data = append(data, objValue(info.Name, fieldValue)...)
+			count++
 		}
 		encoded = make([]byte, 5+len(data))
 		encoded[0] = byte(Type_object)
-		binary.LittleEndian.PutUint32(encoded[1:5], uint32(len(data)))
+		binary.LittleEndian.PutUint32(encoded[1:5], count)
 		copy(encoded[5:], data)
-		return encoded
 	case reflect.Map:
 		data := make([]byte, 0)
+		var count uint32
 		for _, key := range value.MapKeys() {
 			data = append(data, objValue(key.String(), value.MapIndex(key).Interface())...)
+			count++
 		}
 		encoded = make([]byte, 5+len(data))
 		encoded[0] = byte(Type_object)
-		binary.LittleEndian.PutUint32(encoded[1:5], uint32(len(data)))
+		binary.LittleEndian.PutUint32(encoded[1:5], count)
 		copy(encoded[5:], data)
-		return encoded
 	}
 	return encoded
 }
 
-func arrayValue(item any) []byte {
-	itemBytes := Encode(item)
-	itemLen := uint32(len(itemBytes))
-	bytes := make([]byte, 4+itemLen)
-	binary.LittleEndian.PutUint32(bytes[0:4], itemLen)
-	copy(bytes[4:4+itemLen], itemBytes)
-	return bytes
-}
-
 func objValue(key string, value any) []byte {
-	raw := Encode(value)
-	rawLen := uint32(len(raw))
+	data := Encode(value)
+	dataLen := uint32(len(data))
 	keyLen := uint32(len(key))
-	bytes := make([]byte, 8+keyLen+rawLen)
+	bytes := make([]byte, 4+keyLen+dataLen)
 	// key
 	binary.LittleEndian.PutUint32(bytes[0:4], keyLen)
 	copy(bytes[4:4+keyLen], key)
 	// value
-	binary.LittleEndian.PutUint32(bytes[4+keyLen:8+keyLen], rawLen)
-	copy(bytes[8+keyLen:8+keyLen+rawLen], raw)
+	copy(bytes[4+keyLen:4+keyLen+dataLen], data)
 	return bytes
 }
