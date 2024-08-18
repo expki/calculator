@@ -26,7 +26,7 @@ async function renderLoop(): Promise<void> {
         const bytes = new Uint8Array(sharedBytes.length);
         bytes.set(sharedBytes);
         const [state, _ ]: [state.StateExt, number] = Decode<state.State>(bytes);
-        state.Local.RenderCpu = pref.reduce((a, b) => a + b, 0) / 60;
+        state.CpuRender = pref.reduce((a, b) => a + b, 0) / 60;
         const xCenter = canvas.width / 2;
         const yCenter = canvas.height / 2
 
@@ -38,9 +38,9 @@ async function renderLoop(): Promise<void> {
         // Draw FPS in top left corner
         ctx.fillStyle = "lightgreen";
         ctx.font = "20px Verdana";
-        ctx.fillText(`${state.Local.RenderCpu >= 0.1 ? "" : " "}${(100 * state.Local.RenderCpu).toFixed(2)}%`, 10, 25);
+        ctx.fillText(`${state.CpuLogic >= 0.1 ? "" : " "}${(100 * state.CpuRender).toFixed(2)}%`, 10, 25);
         ctx.fillStyle = "lightblue";
-        ctx.fillText(`${state.Local.Cpu >= 0.1 ? "" : " "}${(100 * state.Local.Cpu).toFixed(2)}%`, 10, 50);
+        ctx.fillText(`${state.CpuLogic >= 0.1 ? "" : " "}${(100 * state.CpuLogic).toFixed(2)}%`, 10, 50);
 
         // Draw calculator
         renderCalculator(ctx, canvas, state.Global.Calculator, xCenter, yCenter);

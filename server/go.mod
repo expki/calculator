@@ -4,6 +4,7 @@ go 1.23.0
 
 require (
 	github.com/expki/calculator/lib v0.0.0-20240818050332-d2f2dee98d42
+	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/klauspost/compress v1.17.9
 	github.com/quic-go/quic-go v0.46.0
@@ -14,7 +15,6 @@ require (
 require (
 	github.com/go-task/slim-sprig v0.0.0-20230315185526-52ccab3ef572 // indirect
 	github.com/google/pprof v0.0.0-20210407192527-94a9f03dee38 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/onsi/ginkgo/v2 v2.9.5 // indirect
 	github.com/quic-go/qpack v0.4.0 // indirect
 	go.uber.org/mock v0.4.0 // indirect

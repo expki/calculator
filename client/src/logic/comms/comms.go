@@ -1,21 +1,21 @@
 package comms
 
 import (
+	"calculator/src/logic"
 	"context"
 	"log"
 	"time"
 
 	"github.com/coder/websocket"
+	"github.com/expki/calculator/lib/encoding"
 )
 
 type Comms struct {
-	conn      *websocket.Conn
-	readChan  chan []byte
-	writeChan chan []byte
+	conn *websocket.Conn
 }
 
-func New() *Comms {
-	uri, err := getWebsocketURL()
+func New(port string, lgc *logic.Logic) *Comms {
+	uri, err := getWebsocketURL(port)
 	if err != nil {
 		log.Fatalf("websocketURL: %v", err)
 	}
@@ -29,12 +29,10 @@ func New() *Comms {
 	}
 
 	comms := &Comms{
-		conn:      conn,
-		readChan:  make(chan []byte),
-		writeChan: make(chan []byte),
+		conn: conn,
 	}
 
-	go func() {
+	/*go func() {
 		defer comms.Close()
 		for {
 			msg := <-comms.writeChan
@@ -46,18 +44,25 @@ func New() *Comms {
 				return
 			}
 		}
-	}()
+	}()*/
 
 	go func() {
 		for {
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 			_, msg, err := conn.Read(ctx)
 			if err != nil {
 				log.Printf("websocket.Message.Read: %v", err)
 				return
 			}
-			comms.readChan <- msg
+			data, _ := encoding.Decode(msg)
+			state, done := lgc.LockState()
+			err = encoding.Engrain(data.(map[string]any), state)
+			if err != nil {
+				log.Printf("encoding.Engrain: %v", err)
+				return
+			}
+			done()
 		}
 	}()
 
@@ -67,22 +72,4 @@ func New() *Comms {
 func (c *Comms) Close() {
 	defer c.conn.CloseNow()
 	c.conn.Close(websocket.StatusNormalClosure, "")
-}
-
-func (c *Comms) TryRead() (msg []byte, ok bool) {
-	select {
-	case msg = <-c.readChan:
-		return msg, true
-	default:
-		return nil, false
-	}
-}
-
-func (c *Comms) TryWrite(msg []byte) bool {
-	select {
-	case c.writeChan <- msg:
-		return true
-	default:
-		return false
-	}
 }

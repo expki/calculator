@@ -7,9 +7,7 @@ import (
 	"syscall/js"
 )
 
-var port string
-
-func getWebsocketURL() (string, error) {
+func getWebsocketURL(port string) (string, error) {
 	uri, err := url.Parse(js.Global().Get("location").Get("href").String())
 	if err != nil {
 		return "", fmt.Errorf("url.Parse window href: %v", err)
@@ -19,6 +17,7 @@ func getWebsocketURL() (string, error) {
 		if err != nil {
 			return "", fmt.Errorf("strconv.Atoi alt port: %v", err)
 		}
+		fmt.Println("Using alt port:", wsPort)
 		uri.Host = fmt.Sprintf("%s:%d", uri.Hostname(), wsPort)
 	}
 	switch uri.Scheme {

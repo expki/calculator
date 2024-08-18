@@ -1,6 +1,8 @@
 package logic
 
 import (
+	"calculator/src/types"
+	"sync"
 	"syscall/js"
 	"time"
 
@@ -10,23 +12,51 @@ import (
 
 const target_tick_rate = time.Millisecond * 1000 / 60
 
-func LogicLoop(sharedArray js.Value) {
+type Logic struct {
+	lock  sync.RWMutex
+	state *schema.Global
+}
+
+func New() *Logic {
+	return &Logic{
+		state: &schema.Global{},
+	}
+}
+
+func (l *Logic) GetState() (*schema.Global, func()) {
+	l.lock.RLock()
+	return l.state, func() {
+		l.lock.RUnlock()
+	}
+}
+
+func (l *Logic) LockState() (*schema.Global, func()) {
+	l.lock.Lock()
+	return l.state, func() {
+		l.lock.Unlock()
+	}
+}
+
+func (l *Logic) LogicLoop(sharedArray js.Value) {
 	pref := [60]float32{0.0}
-	state := schema.State{}
 	for n := 0; true; n++ {
 		// Measure start time
 		start := time.Now()
 
-		// Update state
-		state.Local.Cpu = 0.0
-		for _, value := range pref {
-			state.Local.Cpu += value
+		// Get state
+		global, unlock := l.LockState()
+		state := types.State{
+			Global: global,
 		}
-		state.Local.Cpu /= 5
+		for _, value := range pref {
+			state.CpuLogic += value
+		}
+		state.CpuLogic /= 5
 
 		// Encode state
 		data := encoding.Encode(state)
 		js.CopyBytesToJS(sharedArray, data)
+		unlock()
 
 		// Wait to hit target tick rate
 		end := time.Since(start)

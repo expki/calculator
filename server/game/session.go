@@ -12,7 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
-const tick_rate = 5 * time.Second
+const tick_rate = time.Second / 60
 
 type Session struct {
 	Id     uuid.UUID
@@ -30,6 +30,7 @@ func NewSession(logger *zap.Logger, sugar *zap.SugaredLogger, conn *websocket.Co
 		sugar:  sugar,
 		done:   make(chan error),
 		conn:   conn,
+		state:  state,
 	}
 	go s.handleInput(conn)
 	go s.handleOutput(conn)
@@ -66,8 +67,10 @@ func (g *Session) handleOutput(conn *websocket.Conn) {
 	defer conn.Close()
 	for {
 		start := time.Now()
+		// Encode state
+		encodedState := encoding.Encode(g.state)
 		//Send the state to the client
-		if err := conn.WriteMessage(websocket.BinaryMessage, encoding.Encode(g.state)); err != nil {
+		if err := conn.WriteMessage(websocket.BinaryMessage, encodedState); err != nil {
 			g.sugar.Error("Write error:", err)
 			break
 		}

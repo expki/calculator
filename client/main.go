@@ -9,6 +9,8 @@ import (
 	"github.com/coder/websocket"
 )
 
+var port string
+
 type Websocket struct {
 	*websocket.Conn
 }
@@ -18,14 +20,16 @@ func main() {
 	sharedArray := js.Global().Get("sharedArray")
 
 	// Run game tick
-	logic.LogicLoop(sharedArray)
+	lgc := logic.New()
+	go lgc.LogicLoop(sharedArray)
 
 	// Listen to user input
 	input := userinput.New()
 	defer input.Close()
 
 	// Connect to server
-	comms.New()
+	cms := comms.New(port, lgc)
+	defer cms.Close()
 
 	// Wait forever
 	select {}

@@ -58,10 +58,8 @@ func main() {
 	// Game
 	engine := game.New(logger)
 
-	// Register Endpoints
+	// Create mux
 	mux := http.NewServeMux()
-	mux.Handle("/", http.FileServerFS(public.Root))
-	mux.Handle("/session", engine.UpgradeHandler())
 
 	// HTTP
 	server := http.Server{
@@ -96,11 +94,8 @@ func main() {
 		QUICConfig: &quic.Config{},
 	}
 
-	// Create middleware
-	var middleware http.Handler = mux
-
 	// Headers middleware
-	middleware = func(h http.Handler) http.Handler {
+	middlewareHeaders := func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// WASM headers
 			w.Header().Set("Cross-Origin-Opener-Policy", "same-origin")
@@ -114,10 +109,10 @@ func main() {
 			}
 			h.ServeHTTP(w, r)
 		})
-	}(middleware)
+	}
 
 	// Compression middleware
-	middleware = func(h http.Handler) http.Handler {
+	middlewareCompression := func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if !strings.Contains(r.Header.Get("Accept-Encoding"), "zstd") {
 				h.ServeHTTP(w, r)
@@ -131,16 +126,14 @@ func main() {
 				return
 			}
 			defer encoder.Close()
-
 			zstrw := &zstdResponseWriter{ResponseWriter: w, Writer: encoder}
 			h.ServeHTTP(zstrw, r)
 		})
-	}(middleware)
+	}
 
-	// Add middleware to server
-	server.Handler = middleware
-	server2.Handler = middleware
-	server3.Handler = middleware
+	// Routes
+	mux.Handle("/", middlewareHeaders(middlewareCompression(http.FileServerFS(public.Root))))
+	mux.Handle("/session", middlewareHeaders(engine.UpgradeHandler()))
 
 	// Start servers
 	serverDone := make(chan struct{})

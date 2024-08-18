@@ -1,6 +1,6 @@
 import type * as state from '../types/state';
 
-export function renderCalculator(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: state.StateCalculator, x: number, y: number) {
+export function renderCalculator(ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, state: state.Calculator, x: number, y: number) {
     const width = 200; // Half width of the rectangle
     const height = 350; // Half height of the rectangle
     const radius = 10; // Corner radius
