@@ -288,3 +288,92 @@ func Test_Encode_Struct(t *testing.T) {
 		t.Fatalf("Decode(Encode(<struct>)) = \nwant: %v(%v), \ngot:  %v(%v)", reflect.TypeOf(input), input, reflect.TypeOf(output), output)
 	}
 }
+
+// Test_Encode_Struct2 ...
+func Test_Encode_Struct2(t *testing.T) {
+	type object struct {
+		A struct {
+			Aa int
+		}
+		B struct {
+			Ba int
+		}
+	}
+	var input object = object{
+		A: struct{ Aa int }{
+			Aa: 1,
+		},
+		B: struct{ Ba int }{
+			Ba: 2,
+		},
+	}
+	var want []byte = []byte{
+		byte(encoding.Type_object), 2, 0, 0, 0,
+		// A
+		1, 0, 0, 0, 'A', byte(encoding.Type_object), 1, 0, 0, 0,
+		2, 0, 0, 0, 'A', 'a', byte(encoding.Type_uint8), 1,
+		// B
+		1, 0, 0, 0, 'B', byte(encoding.Type_object), 1, 0, 0, 0,
+		2, 0, 0, 0, 'B', 'a', byte(encoding.Type_uint8), 2,
+	}
+
+	var got []byte = encoding.Encode(input)
+	var output any
+	output, _ = encoding.Decode(got)
+
+	wantCount := make(map[uint8]int)
+	gotCount := make(map[uint8]int)
+	for i := 0; i < len(want); i++ {
+		wantCount[want[i]]++
+	}
+	for i := 0; i < len(got); i++ {
+		gotCount[got[i]]++
+	}
+	if !reflect.DeepEqual(wantCount, gotCount) {
+		t.Fatalf("Encode(<struct>) = \nwant: %v(%v), \ngot:  %v(%v)", reflect.TypeOf(want), want, reflect.TypeOf(got), got)
+	}
+	inputJson, _ := json.Marshal(input)
+	outputJson, _ := json.Marshal(output)
+	if !reflect.DeepEqual(inputJson, outputJson) {
+		t.Fatalf("Decode(Encode(<struct>)) = \nwant: %v(%v), \ngot:  %v(%v)", reflect.TypeOf(input), input, reflect.TypeOf(output), output)
+	}
+}
+
+// Test_Encode_Struct3 ...
+func Test_Encode_Struct3(t *testing.T) {
+	type object struct {
+		A []int
+		B []int
+	}
+	var input object = object{
+		B: []int{0},
+	}
+	var want []byte = []byte{
+		byte(encoding.Type_object), 2, 0, 0, 0,
+		// A
+		1, 0, 0, 0, 'A', byte(encoding.Type_null),
+		// B
+		1, 0, 0, 0, 'B', byte(encoding.Type_array), 1, 0, 0, 0,
+		byte(encoding.Type_uint8), 0,
+	}
+	var got []byte = encoding.Encode(input)
+	var output any
+	output, _ = encoding.Decode(got)
+
+	wantCount := make(map[uint8]int)
+	gotCount := make(map[uint8]int)
+	for i := 0; i < len(want); i++ {
+		wantCount[want[i]]++
+	}
+	for i := 0; i < len(got); i++ {
+		gotCount[got[i]]++
+	}
+	if !reflect.DeepEqual(wantCount, gotCount) {
+		t.Fatalf("Encode(<struct>) = \nwant: %v(%v), \ngot:  %v(%v)", reflect.TypeOf(want), want, reflect.TypeOf(got), got)
+	}
+	inputJson, _ := json.Marshal(input)
+	outputJson, _ := json.Marshal(output)
+	if !reflect.DeepEqual(inputJson, outputJson) {
+		t.Fatalf("Decode(Encode(<struct>)) = \nwant: %v(%v), \ngot:  %v(%v)", reflect.TypeOf(input), input, reflect.TypeOf(output), output)
+	}
+}

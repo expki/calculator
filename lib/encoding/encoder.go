@@ -82,6 +82,11 @@ func Encode(data any) (encoded []byte) {
 		}
 		fallthrough
 	case reflect.Array:
+		length := value.Len()
+		if length == 0 {
+			// unfortunately the decoder can't identify the golang type of an empty slice
+			return []byte{byte(Type_null)}
+		}
 		if value.Type().Elem().Kind() == reflect.Uint8 { // Handle []byte
 			v := value.Bytes()
 			encoded = make([]byte, 5+len(v))
@@ -93,7 +98,6 @@ func Encode(data any) (encoded []byte) {
 		}
 		encoded = make([]byte, 5)
 		encoded[0] = byte(Type_array)
-		length := value.Len()
 		binary.LittleEndian.PutUint32(encoded[1:5], uint32(length))
 		for i := 0; i < length; i++ {
 			value := value.Index(i).Interface()
