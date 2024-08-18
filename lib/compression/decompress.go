@@ -11,7 +11,7 @@ var decoder *zstd.Decoder = func() *zstd.Decoder {
 }()
 
 func Decompress(in []byte) (out []byte, err error) {
-	_, err = decoder.DecodeAll(in, out)
+	out, err = decoder.DecodeAll(in, out)
 	if err != nil {
 		return nil, err
 	}

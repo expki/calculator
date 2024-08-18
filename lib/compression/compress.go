@@ -10,7 +10,7 @@ var encoder *zstd.Encoder = func() *zstd.Encoder {
 	return encoder
 }()
 
-func Compress(in []byte) (out []byte, err error) {
-	encoder.EncodeAll(in, out)
-	return out, nil
+func Compress(in []byte) (out []byte) {
+	out = encoder.EncodeAll(in, out)
+	return out
 }
