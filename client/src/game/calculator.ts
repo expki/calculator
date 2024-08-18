@@ -37,7 +37,22 @@ export function renderCalculator(ctx: CanvasRenderingContext2D, canvas: HTMLCanv
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
     }
+    // Header bar
+    function drawHeaderBar(x: number, y: number, width: number, height: number) {
+        ctx.fillStyle = '#005f73'; // Header bar color
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.arcTo(x + width, y, x + width, y + radius, radius);
+        ctx.lineTo(x + width, y + height);
+        ctx.lineTo(x, y + height);
+        ctx.lineTo(x, y + radius);
+        ctx.arcTo(x, y, x + radius, y, radius);
+        ctx.closePath();
+        ctx.fill();
+    }
     drawRoundedRect(x-width, y-height, width*2, height*2, radius);
+    drawHeaderBar(x-width, y-height, width*2, 50);
 
     // Header
     ctx.fillStyle = 'white'; // Set text color to black

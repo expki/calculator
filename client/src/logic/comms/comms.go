@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
+	"github.com/expki/calculator/lib/compression"
 	"github.com/expki/calculator/lib/encoding"
 	"github.com/expki/calculator/lib/schema"
 )
@@ -45,7 +46,7 @@ func New(port string, lgc *logic.Logic, usi *userinput.UserInput) *Comms {
 				userIn.X = usi.GetMouseX()
 				userIn.Y = usi.GetMouseY()
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-				err := conn.Write(ctx, websocket.MessageBinary, encoding.Encode(userIn))
+				err = conn.Write(ctx, websocket.MessageBinary, compression.Compress(encoding.Encode(userIn)))
 				if err != nil {
 					log.Printf("websocket.Message.Send: %v", err)
 					cancel()
@@ -69,7 +70,13 @@ func New(port string, lgc *logic.Logic, usi *userinput.UserInput) *Comms {
 				cancel()
 				return
 			}
-			data, _ := encoding.Decode(msg)
+			out, err := compression.Decompress(msg)
+			if err != nil {
+				log.Printf("websocket.Message.Compress: %v", err)
+				cancel()
+				return
+			}
+			data, _ := encoding.Decode(out)
 			state, done := lgc.LockState()
 			err = encoding.Engrain(data.(map[string]any), state)
 			if err != nil {

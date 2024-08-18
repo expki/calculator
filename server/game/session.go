@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"time"
 
+	"github.com/expki/calculator/lib/compression"
 	"github.com/expki/calculator/lib/encoding"
 	"github.com/expki/calculator/lib/schema"
 
@@ -62,7 +63,12 @@ func (g *Session) handleInput(conn *websocket.Conn) {
 		switch mt {
 		case websocket.BinaryMessage:
 			// Decode the message
-			data, _ := encoding.Decode(message)
+			out, err := compression.Decompress(message)
+			if err != nil {
+				g.sugar.Errorf("Decompress client message")
+				continue
+			}
+			data, _ := encoding.Decode(out)
 			var userIn schema.Input
 			err = encoding.Engrain(data.(map[string]any), &userIn)
 			if err != nil {
@@ -96,7 +102,7 @@ func (g *Session) handleOutput(conn *websocket.Conn) {
 		encodedState := encoding.Encode(g.state)
 		if !bytes.Equal(encodedState, lastEncodedState) {
 			//Send the state to the client
-			if err := conn.WriteMessage(websocket.BinaryMessage, encodedState); err != nil {
+			if err := conn.WriteMessage(websocket.BinaryMessage, compression.Compress(encodedState)); err != nil {
 				g.sugar.Error("Write error:", err)
 				break
 			}
