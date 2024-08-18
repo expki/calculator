@@ -42,9 +42,7 @@ func Decode(encoded []byte) (data any, length int) {
 		length := int(binary.LittleEndian.Uint32(encoded[1:5]))
 		return string(encoded[5 : 5+length]), 5 + length
 	case Type_array:
-		fmt.Println("Type_array")
 		length := int(binary.LittleEndian.Uint32(encoded[1:5]))
-		fmt.Println("Array length:", length)
 		array := make([]any, length)
 		offset := 5
 		var valueLength int

@@ -39,6 +39,21 @@ func Engrain(data map[string]any, dst any) (err error) {
 			}
 			continue
 		}
+		if field.Kind() == reflect.Slice && field.Type().Elem().Kind() == reflect.Struct {
+			slice := reflect.MakeSlice(field.Type(), 0, field.Cap())
+			if value == nil {
+				continue
+			}
+			for idx := 0; idx < reflect.ValueOf(value).Len(); idx++ {
+				itemStruct := reflect.New(field.Type().Elem()).Elem()
+				if err = Engrain(reflect.ValueOf(value).Index(idx).Interface().(map[string]any), itemStruct.Addr().Interface()); err != nil {
+					return err
+				}
+				slice = reflect.Append(slice, itemStruct)
+			}
+			field.Set(slice)
+			continue
+		}
 		field.Set(reflect.ValueOf(value))
 	}
 	return nil
