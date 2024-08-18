@@ -11,7 +11,7 @@ import (
 func Test_Global_Encode(t *testing.T) {
 	input := schema.Global{
 		Calculator: schema.Calculator{},
-		Members:    []schema.Member{},
+		Members:    nil,
 	}
 	data := encoding.Encode(&input)
 	generic, _ := encoding.Decode(data)

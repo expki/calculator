@@ -2,6 +2,7 @@ package encoding
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 )
 
@@ -19,14 +20,11 @@ func Engrain(data map[string]any, dst any) (err error) {
 	if reflect.ValueOf(dst).IsNil() {
 		return errors.New("engrain dst must not be nil")
 	}
-	// validate pointer points to a struct
 	dstStruct := reflect.ValueOf(dst).Elem()
-	if dstStruct.Kind() != reflect.Struct {
-		return errors.New("engrain dst must be a struct pointer")
-	}
 	// engrain data into dst
 	for key, value := range data {
 		field := dstStruct.FieldByName(key)
+		fmt.Println(key, value)
 		if !field.IsValid() {
 			continue
 		}
@@ -54,7 +52,33 @@ func Engrain(data map[string]any, dst any) (err error) {
 			field.Set(slice)
 			continue
 		}
-		field.Set(reflect.ValueOf(value))
+		// todo: fix this mess
+		if field.Kind() == reflect.Slice && field.Type().Elem().Kind() == reflect.Pointer {
+			slice := reflect.MakeSlice(field.Type(), 0, field.Cap())
+			if value == nil {
+				continue
+			}
+			for idx := 0; idx < reflect.ValueOf(value).Len(); idx++ {
+				itemStruct := reflect.New(field.Type().Elem().Elem()).Elem()
+				fmt.Println(key, idx, itemStruct)
+				if err = Engrain(reflect.ValueOf(value).Index(idx).Interface().(map[string]any), itemStruct.Addr().Interface()); err != nil {
+					return err
+				}
+				fmt.Println(key, idx, reflect.ValueOf(value).Index(idx))
+				ptrValue := reflect.New(itemStruct.Type())
+				ptrValue.Elem().Set(itemStruct)
+				slice = reflect.Append(slice, ptrValue)
+			}
+			field.Set(slice)
+			continue
+		}
+		if field.Kind() == reflect.Ptr {
+			ptrValue := reflect.New(field.Type().Elem())
+			ptrValue.Elem().Set(reflect.ValueOf(value))
+			field.Set(ptrValue)
+		} else {
+			field.Set(reflect.ValueOf(value))
+		}
 	}
 	return nil
 }

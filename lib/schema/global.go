@@ -5,7 +5,7 @@ import "sync"
 type Global struct {
 	lock       sync.RWMutex
 	Calculator Calculator
-	Members    []Member
+	Members    []*Member
 	members    map[string]*Member
 }
 
@@ -14,8 +14,9 @@ func (g *Global) AddMember(id string, x, y int) {
 	if g.members == nil {
 		g.members = make(map[string]*Member)
 	}
-	g.Members = append(g.Members, Member{Id: id, X: x, Y: y})
-	g.members[id] = &g.Members[len(g.Members)-1]
+	member := &Member{Id: id, X: x, Y: y}
+	g.Members = append(g.Members, member)
+	g.members[id] = member
 	g.lock.Unlock()
 }
 
@@ -42,8 +43,8 @@ func (g *Global) GetMember(id string) *Member {
 	defer g.lock.Unlock()
 	for i := range g.Members {
 		if g.Members[i].Id == id {
-			g.members[id] = &g.Members[i]
-			return &g.Members[i]
+			g.members[id] = g.Members[i]
+			return g.Members[i]
 		}
 	}
 	return nil
