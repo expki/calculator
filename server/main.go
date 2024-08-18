@@ -106,14 +106,11 @@ func main() {
 			w.Header().Set("Cross-Origin-Opener-Policy", "same-origin")
 			w.Header().Set("Cross-Origin-Embedder-Policy", "require-corp")
 			// QUIC upgrade middleware
-			if r.ProtoMajor < 3 {
-				sugar.Debug("Sending QUIC headers")
+			if r.ProtoMajor == 2 {
 				err := server3.SetQUICHeaders(w.Header())
 				if err != nil {
 					sugar.Errorf("SetQUICHeaders failed: %v", err)
 				}
-			} else {
-				sugar.Debug("Client using QUIC")
 			}
 			h.ServeHTTP(w, r)
 		})
