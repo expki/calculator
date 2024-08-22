@@ -101,7 +101,7 @@ export async function listenForUserInput(canvas: HTMLCanvasElement, logic: Worke
             // Set canvas size to window size
             const dpr = window.devicePixelRatio || 1;
             canvas.width = window.innerWidth * dpr;
-            window.innerHeight * dpr;
+            canvas.height = window.innerHeight * dpr;
             canvas.style.width = window.innerWidth + "px";
             canvas.style.height = window.innerHeight + "px";
             canvas.getContext("2d").scale(dpr, dpr);
