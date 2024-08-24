@@ -1,6 +1,7 @@
 package compression_test
 
 import (
+	"bytes"
 	"reflect"
 	"testing"
 
@@ -13,10 +14,13 @@ func Test_Compress(t *testing.T) {
 	var output []byte
 	out := compression.Compress(input)
 	original, err := compression.Decompress(out)
+	if bytes.Equal(input, out) {
+		t.Fatalf("Decompress(<data>) = data, no compression occured")
+	}
 	if err != nil {
-		t.Fatalf("Decompress(<null>) err = %v", err)
+		t.Fatalf("Decompress(<data>) err = %v", err)
 	}
 	if !reflect.DeepEqual(input, original) {
-		t.Fatalf("Decompress(Compress(<null>)) = \nwant: %v, \ngot:  %v", input, output)
+		t.Fatalf("Decompress(Compress(<data>)) = \nwant: %v, \ngot:  %v", input, output)
 	}
 }
