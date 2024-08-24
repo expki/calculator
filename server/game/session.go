@@ -101,8 +101,11 @@ func (g *Session) handleOutput(conn *websocket.Conn) {
 		// Encode state
 		encodedState := encoding.Encode(g.state)
 		if !bytes.Equal(encodedState, lastEncodedState) {
+			//Compress message
+			msg := compression.Compress(encodedState)
+			g.sugar.Debugf("message compression: %.2f", float64(len(msg))/float64(len(encodedState)))
 			//Send the state to the client
-			if err := conn.WriteMessage(websocket.BinaryMessage, compression.Compress(encodedState)); err != nil {
+			if err := conn.WriteMessage(websocket.BinaryMessage, msg); err != nil {
 				g.sugar.Error("Write error:", err)
 				break
 			}

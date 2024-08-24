@@ -15,10 +15,10 @@ func Test_Compress(t *testing.T) {
 	out := compression.Compress(input)
 	original, err := compression.Decompress(out)
 	if bytes.Equal(input, out) {
-		t.Fatalf("Decompress(<data>) = data, no compression occured")
+		t.Fatalf("Compress(<data>) = data, no compression occured")
 	}
 	if err != nil {
-		t.Fatalf("Decompress(<data>) err = %v", err)
+		t.Fatalf("Decompress(Compress(<data>)) err = %v", err)
 	}
 	if !reflect.DeepEqual(input, original) {
 		t.Fatalf("Decompress(Compress(<data>)) = \nwant: %v, \ngot:  %v", input, output)
