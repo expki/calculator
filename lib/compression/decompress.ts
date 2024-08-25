@@ -1,5 +1,6 @@
 import pako from 'pako';
 
+// WIP, for some reason it doesn't like decoding golang compression output
 export function Decompress(input: Uint8Array): [Uint8Array, Error | undefined] {
     const decoder = new pako.Inflate({
     });    

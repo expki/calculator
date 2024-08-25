@@ -5,7 +5,6 @@ import (
 	"calculator/src/types"
 	"context"
 	"log"
-	"sync"
 	"syscall/js"
 	"time"
 
@@ -15,9 +14,8 @@ import (
 )
 
 type Logic struct {
-	connectLock sync.Mutex
-	url         string
-	conn        *websocket.Conn
+	url  string
+	conn *websocket.Conn
 }
 
 type UserInput struct {
@@ -43,7 +41,7 @@ func New(port string, sharedArray js.Value) *Logic {
 	}
 
 	// Set initial state
-	js.CopyBytesToJS(sharedArray, encoding.EncodeWithCompression(types.State{}))
+	js.CopyBytesToJS(sharedArray, encoding.Encode(types.State{}))
 
 	// Connect to the server
 	logic.connect()
@@ -57,9 +55,7 @@ func New(port string, sharedArray js.Value) *Logic {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
-		logic.connectLock.Lock()
 		err = logic.conn.Write(ctx, websocket.MessageBinary, msg)
-		logic.connectLock.Unlock()
 		if err != nil {
 			log.Printf("websocket.Message.Send exception: %v", err)
 			return
@@ -108,7 +104,6 @@ func New(port string, sharedArray js.Value) *Logic {
 				_, msg, err := logic.conn.Read(ctx)
 				if err != nil {
 					log.Printf("websocket.Message.Read exception: %v", err)
-					logic.connect()
 					return
 				}
 				data, err := encoding.DecodeWithCompression(msg)
@@ -125,7 +120,7 @@ func New(port string, sharedArray js.Value) *Logic {
 				state := types.State{
 					Global: global,
 				}
-				stateData := encoding.EncodeWithCompression(state)
+				stateData := encoding.Encode(state)
 				if !bytes.Equal(lastStateData, stateData) {
 					js.CopyBytesToJS(sharedArray, stateData)
 					lastStateData = stateData

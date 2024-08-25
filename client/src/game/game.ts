@@ -26,10 +26,7 @@ async function renderLoop(): Promise<void> {
         const sharedBytes = new Uint8Array(sharedBuffer);
         const bytes = new Uint8Array(sharedBytes.length);
         bytes.set(sharedBytes);
-        const [state, err ]: [state.StateExt, Error | undefined] = lib.encoding.DecodeWithCompression<state.State>(bytes);
-        if (err !== undefined) {
-            throw err;
-        }
+        const [state, _ ]: [state.StateExt, number] = lib.encoding.Decode<state.State>(bytes);
         state.CpuRender = pref.reduce((a, b) => a + b, 0) / 60;
         const xCenter = canvas.width / 2;
         const yCenter = canvas.height / 2

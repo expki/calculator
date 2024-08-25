@@ -13,12 +13,9 @@ import (
 )
 
 func (c *Logic) connect() {
-	if ok := c.connectLock.TryLock(); !ok {
-		return
-	}
 	for {
 		if success := func() bool {
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 			defer cancel()
 			var err error
 			c.conn, _, err = websocket.Dial(ctx, c.url, nil)
@@ -28,7 +25,6 @@ func (c *Logic) connect() {
 			}
 			return true
 		}(); success {
-			c.connectLock.Unlock()
 			return
 		}
 		log.Println("failed to connect, retrying every 3 seconds")
