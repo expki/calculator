@@ -11,7 +11,7 @@ import (
 func EncodeWithCompression(data any) (encoded []byte) {
 	payload := Encode(data)
 	payloadCompressed := compression.Compress(payload)
-	if len(payloadCompressed) < len(payload) && false {
+	if len(payloadCompressed) < len(payload) || true {
 		encoded = make([]byte, 1+len(payloadCompressed))
 		encoded[0] = 1
 		copy(encoded[1:], payloadCompressed)
