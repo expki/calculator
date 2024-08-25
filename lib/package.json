@@ -1,0 +1,31 @@
+{
+  "name": "lib",
+  "version": "1.0.0",
+  "description": "calculator shared library",
+  "main": "index.ts",
+  "type": "module",
+  "scripts": {
+    "test": "cross-env TS_NODE_PROJECT='./tsconfig.json' mocha"
+  },
+  "keywords": [
+    "typescript",
+    "go"
+  ],
+  "author": "expki",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/expki/calculator/issues"
+  },
+  "dependencies": {
+    "pako": "^2.1.0"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.17",
+    "@types/mocha": "^10.0.7",
+    "@types/pako": "^2.0.3",
+    "chai": "^5.1.1",
+    "cross-env": "^7.0.3",
+    "mocha": "^10.7.3",
+    "ts-node": "^10.9.2"
+  }
+}
