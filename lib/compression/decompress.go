@@ -3,7 +3,11 @@ package compression
 import "github.com/klauspost/compress/zstd"
 
 var decoder *zstd.Decoder = func() *zstd.Decoder {
-	decoder, err := zstd.NewReader(nil)
+	decoder, err := zstd.NewReader(
+		nil,
+		zstd.WithDecoderConcurrency(1),
+		zstd.IgnoreChecksum(true),
+	)
 	if err != nil {
 		panic(err)
 	}

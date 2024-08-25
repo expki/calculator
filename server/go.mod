@@ -3,7 +3,7 @@ module calculator
 go 1.23.0
 
 require (
-	github.com/expki/calculator/lib v0.0.0-20240818121954-bab18c80aca2
+	github.com/expki/calculator/lib v0.0.0-20240824234626-6da9976bafd8
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/klauspost/compress v1.17.9
