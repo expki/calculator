@@ -27,5 +27,8 @@
     "cross-env": "^7.0.3",
     "mocha": "^10.7.3",
     "ts-node": "^10.9.2"
+  },
+  "publishConfig": {
+    "expki:registry": "https://npm.pkg.github.com"
   }
 }
