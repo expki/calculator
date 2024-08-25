@@ -2,8 +2,6 @@ package main
 
 import (
 	"calculator/src/logic"
-	"calculator/src/logic/comms"
-	"calculator/src/userinput"
 	"syscall/js"
 
 	"github.com/coder/websocket"
@@ -20,17 +18,8 @@ func main() {
 	sharedArray := js.Global().Get("sharedArray")
 
 	// Run game tick
-	lgc := logic.New()
-	go lgc.LogicLoop(sharedArray)
-
-	// Listen to user input
-	input := userinput.New()
-	defer input.Close()
-
-	// Connect to server
-	cms := comms.New(port, lgc, input)
-	defer cms.Close()
-
+	l := logic.New(port, sharedArray)
+	defer l.Close()
 	// Wait forever
 	select {}
 }

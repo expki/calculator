@@ -15,5 +15,9 @@ func New(logger *zap.Logger) *Game {
 	return &Game{
 		logger: logger,
 		sugar:  logger.Sugar(),
+		state: schema.Global{
+			Calculator: schema.Calculator{},
+			Members:    make(map[string]*schema.Member),
+		},
 	}
 }

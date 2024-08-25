@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/coder/websocket v1.8.12
-	github.com/expki/calculator/lib v0.0.0-20240824234626-6da9976bafd8
+	github.com/expki/calculator/lib v0.0.0-20240825054415-569d2a22d5ac
 )
 
 require github.com/klauspost/compress v1.17.9 // indirect

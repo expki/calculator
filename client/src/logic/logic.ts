@@ -31,6 +31,7 @@ self.onmessage = async (event: MessageEvent<types.Payload<any>>) => {
         case enums.PayloadKind.input: {
             const payload: types.PayloadInput = event.data.payload;
             try {
+                console.debug("Received input:", payload);
                 handleInput(payload);
             } catch (_) {}
             return;

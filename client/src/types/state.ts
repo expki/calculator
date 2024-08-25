@@ -9,7 +9,7 @@ export type State = {
 
 export type Global = {
 	Calculator: Calculator,
-	Members: null | Member[],
+	Members: null | {[id: string]: Member},
 }
 
 export type Member = {

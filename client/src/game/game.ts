@@ -26,7 +26,10 @@ async function renderLoop(): Promise<void> {
         const sharedBytes = new Uint8Array(sharedBuffer);
         const bytes = new Uint8Array(sharedBytes.length);
         bytes.set(sharedBytes);
-        const [state, _ ]: [state.StateExt, number] = lib.encoding.Decode<state.State>(bytes);
+        const [state, err ]: [state.StateExt, Error | undefined] = lib.encoding.DecodeWithCompression<state.State>(bytes);
+        if (err !== undefined) {
+            throw err;
+        }
         state.CpuRender = pref.reduce((a, b) => a + b, 0) / 60;
         const xCenter = canvas.width / 2;
         const yCenter = canvas.height / 2
@@ -47,7 +50,7 @@ async function renderLoop(): Promise<void> {
         renderCalculator(ctx, canvas, state.Global.Calculator, xCenter, yCenter);
 
         // Draw cursor
-        (state.Global.Members ?? []).forEach((member) => renderCursor(ctx, canvas, member))
+        Object.values(state.Global.Members ?? {}).forEach((member) => renderCursor(ctx, canvas, member));
 
         // Calculate render time
         const end = performance.now() - start;

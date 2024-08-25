@@ -1,11 +1,39 @@
-package comms
+package logic
 
 import (
+	"context"
 	"fmt"
+	"log"
 	"net/url"
 	"strconv"
 	"syscall/js"
+	"time"
+
+	"github.com/coder/websocket"
 )
+
+func (c *Logic) connect() {
+	if ok := c.connectLock.TryLock(); !ok {
+		return
+	}
+	for {
+		if success := func() bool {
+			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			defer cancel()
+			var err error
+			c.conn, _, err = websocket.Dial(ctx, c.url, nil)
+			if err != nil {
+				log.Printf("websocket.Dial exception: %v", err)
+				return false
+			}
+			return true
+		}(); success {
+			c.connectLock.Unlock()
+			return
+		}
+		log.Println("failed to connect, retrying every 3 seconds")
+	}
+}
 
 func getWebsocketURL(port string) (string, error) {
 	uri, err := url.Parse(js.Global().Get("location").Get("href").String())

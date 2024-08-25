@@ -3,71 +3,140 @@ package logic
 import (
 	"bytes"
 	"calculator/src/types"
+	"context"
+	"log"
 	"sync"
 	"syscall/js"
+	"time"
 
+	"github.com/coder/websocket"
 	"github.com/expki/calculator/lib/encoding"
 	"github.com/expki/calculator/lib/schema"
 )
 
-const maxPanding = 100
-
 type Logic struct {
-	lock    sync.RWMutex
-	state   *schema.Global
-	pending chan struct{}
+	connectLock sync.Mutex
+	url         string
+	conn        *websocket.Conn
 }
 
-func New() *Logic {
-	return &Logic{
-		state:   &schema.Global{},
-		pending: make(chan struct{}, maxPanding),
+type UserInput struct {
+	width     int
+	height    int
+	key       map[string]bool
+	mouseleft bool
+	mousex    int
+	mousey    int
+}
+
+func New(port string, sharedArray js.Value) *Logic {
+	// Get server websocket url
+	uri, err := getWebsocketURL(port)
+	if err != nil {
+		log.Fatalf("websocketURL: %v", err)
 	}
-}
 
-func (l *Logic) GetState() (*schema.Global, func()) {
-	l.lock.RLock()
-	return l.state, func() {
-		l.lock.RUnlock()
+	// Instantiate the logic module
+	logic := &Logic{
+		url:  uri,
+		conn: nil,
 	}
-}
 
-func (l *Logic) LockState() (*schema.Global, func()) {
-	l.lock.Lock()
-	return l.state, func() {
-		l.pending <- struct{}{}
-		l.lock.Unlock()
+	// Set initial state
+	js.CopyBytesToJS(sharedArray, encoding.EncodeWithCompression(types.State{}))
+
+	// Connect to the server
+	logic.connect()
+
+	// Client (self) → Server
+	var lastMsg []byte
+	notify := func(input schema.Input) {
+		msg := encoding.EncodeWithCompression(input)
+		if bytes.Equal(lastMsg, msg) {
+			return
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		err = logic.conn.Write(ctx, websocket.MessageBinary, msg)
+		if err != nil {
+			log.Printf("websocket.Message.Send exception: %v", err)
+			logic.connect()
+			return
+		}
+		lastMsg = msg
 	}
-}
+	window := js.Global()
+	userInput := UserInput{key: make(map[string]bool)}
+	window.Set("handleInput", js.FuncOf(func(this js.Value, args []js.Value) any {
+		if len(args) < 1 {
+			return nil
+		}
+		arg := args[0]
+		if value := arg.Get("width"); !value.IsUndefined() {
+			userInput.width = value.Int()
+		}
+		if value := arg.Get("height"); !value.IsUndefined() {
+			userInput.height = value.Int()
+		}
+		if value := arg.Get("keyup"); !value.IsUndefined() {
+			userInput.key[value.String()] = false
+		}
+		if value := arg.Get("keydown"); !value.IsUndefined() {
+			userInput.key[value.String()] = true
+		}
+		if value := arg.Get("mouseleft"); !value.IsUndefined() {
+			userInput.mouseleft = value.Bool()
+		}
+		if value := arg.Get("mousex"); !value.IsUndefined() {
+			userInput.mousex = value.Int()
+		}
+		if value := arg.Get("mousey"); !value.IsUndefined() {
+			userInput.mousey = value.Int()
+		}
+		notify(schema.Input{X: userInput.mousex, Y: userInput.mousey})
+		return nil
+	}))
 
-func (l *Logic) LogicLoop(sharedArray js.Value) {
-	var lastData []byte
-	for n := 0; true; n++ {
-		// Wait for pending
-		<-l.pending
-
-		// Clear additional pending
-		func() {
-			for i := 0; i < maxPanding; i++ {
-				select {
-				case <-l.pending:
-				default:
+	// Server → Client (self)
+	go func() {
+		var lastStateData []byte
+		for {
+			func() {
+				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+				defer cancel()
+				_, msg, err := logic.conn.Read(ctx)
+				if err != nil {
+					log.Printf("websocket.Message.Read exception: %v", err)
+					logic.connect()
 					return
 				}
-			}
-		}()
-
-		// Get state
-		global, unlock := l.GetState()
-		state := types.State{
-			Global: global,
+				data, err := encoding.DecodeWithCompression(msg)
+				if err != nil {
+					log.Printf("websocket.Message.Compress exception: %v", err)
+					return
+				}
+				var global schema.Global
+				err = encoding.Engrain(data.(map[string]any), &global)
+				if err != nil {
+					log.Printf("encoding.Engrain exception: %v", err)
+					return
+				}
+				state := types.State{
+					Global: global,
+				}
+				stateData := encoding.EncodeWithCompression(state)
+				if !bytes.Equal(lastStateData, stateData) {
+					js.CopyBytesToJS(sharedArray, stateData)
+					lastStateData = stateData
+				}
+			}()
 		}
+	}()
 
-		// Encode state
-		data := encoding.Encode(state)
-		if !bytes.Equal(lastData, data) {
-			js.CopyBytesToJS(sharedArray, data)
-		}
-		unlock()
-	}
+	// Return logic module
+	return logic
+}
+
+func (l *Logic) Close() {
+	l.conn.Close(websocket.StatusGoingAway, "normal closure")
 }
