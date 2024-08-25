@@ -1,5 +1,5 @@
 {
-  "name": "lib",
+  "name": "expki/calculator/lib",
   "version": "1.0.0",
   "description": "calculator shared library",
   "main": "index.ts",
