@@ -68,6 +68,21 @@ func Engrain(data map[string]any, dst any) (err error) {
 			field.Set(slice)
 			continue
 		}
+		if field.Kind() == reflect.Map && field.Type().Elem().Kind() == reflect.Pointer {
+			mp := reflect.MakeMap(field.Type())
+			for _, key := range reflect.ValueOf(value).MapKeys() {
+				itemStruct := reflect.New(field.Type().Elem()).Elem()
+				if err = Engrain(reflect.ValueOf(value).MapIndex(key).Interface().(map[string]any), itemStruct.Addr().Interface()); err != nil {
+					return err
+				}
+				mp.SetMapIndex(key, itemStruct)
+			}
+			ptrValue := reflect.New(mp.Type())
+			ptrValue.Elem().Set(mp)
+			field.Set(mp)
+			continue
+		}
+		// todo: fix this mess
 		if field.Kind() == reflect.Map && field.Type().Elem().Kind() == reflect.Struct {
 			mp := reflect.MakeMap(field.Type())
 			for _, key := range reflect.ValueOf(value).MapKeys() {
@@ -79,7 +94,6 @@ func Engrain(data map[string]any, dst any) (err error) {
 			}
 			field.Set(mp)
 			continue
-
 		}
 		if field.Kind() == reflect.Ptr {
 			ptrValue := reflect.New(field.Type().Elem())
