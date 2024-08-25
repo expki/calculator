@@ -4,7 +4,11 @@
     "noImplicitAny": true,
     "module": "ESNext",
     "target": "es2020",
-    "allowJs": false
+    "allowJs": false,
+    "baseUrl": "./",
+    "paths": {
+      "@lib/*": ["../lib/*"],
+    }
   },
   "files": ["src/index.ts"]
 }

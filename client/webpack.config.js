@@ -69,14 +69,16 @@ const config = {
 module.exports = () => {
     if (isProduction) {
         config.mode = 'production';
-        
         config.plugins.push(new MiniCssExtractPlugin());
-        
-        
         config.plugins.push(new WorkboxWebpackPlugin.GenerateSW());
-        
     } else {
         config.mode = 'development';
     }
+    config.resolve = {
+        ...config.resolve, 
+        alias: {
+            '@lib': path.resolve(__dirname, '../lib/'),
+        },
+    };
     return config;
 };

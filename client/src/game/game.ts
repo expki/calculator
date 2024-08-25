@@ -1,4 +1,4 @@
-import { Decode } from './decoder';
+import lib from '@lib/index';
 import { renderCalculator } from './calculator';
 import { renderCursor } from './cursor';
 import type * as state from '../types/state';
@@ -26,7 +26,7 @@ async function renderLoop(): Promise<void> {
         const sharedBytes = new Uint8Array(sharedBuffer);
         const bytes = new Uint8Array(sharedBytes.length);
         bytes.set(sharedBytes);
-        const [state, _ ]: [state.StateExt, number] = Decode<state.State>(bytes);
+        const [state, _ ]: [state.StateExt, number] = lib.encoding.Decode<state.State>(bytes);
         state.CpuRender = pref.reduce((a, b) => a + b, 0) / 60;
         const xCenter = canvas.width / 2;
         const yCenter = canvas.height / 2
