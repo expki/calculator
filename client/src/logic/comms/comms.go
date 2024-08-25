@@ -81,6 +81,7 @@ func New(port string, lgc *logic.Logic, usi *userinput.UserInput) *Comms {
 			if err != nil {
 				log.Printf("encoding.Engrain: %v", err)
 				cancel()
+				done()
 				return
 			}
 			cancel()

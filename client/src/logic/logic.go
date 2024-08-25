@@ -1,25 +1,27 @@
 package logic
 
 import (
+	"bytes"
 	"calculator/src/types"
 	"sync"
 	"syscall/js"
-	"time"
 
 	"github.com/expki/calculator/lib/encoding"
 	"github.com/expki/calculator/lib/schema"
 )
 
-const target_tick_rate = time.Millisecond * 1000 / 60
+const maxPanding = 100
 
 type Logic struct {
-	lock  sync.RWMutex
-	state *schema.Global
+	lock    sync.RWMutex
+	state   *schema.Global
+	pending chan struct{}
 }
 
 func New() *Logic {
 	return &Logic{
-		state: &schema.Global{},
+		state:   &schema.Global{},
+		pending: make(chan struct{}, maxPanding),
 	}
 }
 
@@ -33,38 +35,39 @@ func (l *Logic) GetState() (*schema.Global, func()) {
 func (l *Logic) LockState() (*schema.Global, func()) {
 	l.lock.Lock()
 	return l.state, func() {
+		l.pending <- struct{}{}
 		l.lock.Unlock()
 	}
 }
 
 func (l *Logic) LogicLoop(sharedArray js.Value) {
-	pref := [60]float32{0.0}
+	var lastData []byte
 	for n := 0; true; n++ {
-		// Measure start time
-		start := time.Now()
+		// Wait for pending
+		<-l.pending
+
+		// Clear additional pending
+		func() {
+			for i := 0; i < maxPanding; i++ {
+				select {
+				case <-l.pending:
+				default:
+					return
+				}
+			}
+		}()
 
 		// Get state
-		global, unlock := l.LockState()
+		global, unlock := l.GetState()
 		state := types.State{
 			Global: global,
 		}
-		for _, value := range pref {
-			state.CpuLogic += value
-		}
-		state.CpuLogic /= 5
 
 		// Encode state
 		data := encoding.Encode(state)
-		js.CopyBytesToJS(sharedArray, data)
-		unlock()
-
-		// Wait to hit target tick rate
-		end := time.Since(start)
-		if end < target_tick_rate {
-			time.Sleep(target_tick_rate - end)
+		if !bytes.Equal(lastData, data) {
+			js.CopyBytesToJS(sharedArray, data)
 		}
-
-		// Record tick rate
-		pref[n%5] = float32(end) / float32(target_tick_rate)
+		unlock()
 	}
 }
