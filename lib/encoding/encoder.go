@@ -4,7 +4,24 @@ import (
 	"encoding/binary"
 	"math"
 	"reflect"
+
+	"github.com/expki/calculator/lib/compression"
 )
+
+func EncodeWithCompression(data any) (encoded []byte) {
+	payload := Encode(data)
+	payloadCompressed := compression.Compress(payload)
+	if len(payloadCompressed) < len(payload) {
+		encoded = make([]byte, 1+len(payloadCompressed))
+		encoded[0] = 1
+		copy(encoded[1:], payloadCompressed)
+	} else {
+		encoded = make([]byte, 1+len(payload))
+		encoded[0] = 0
+		copy(encoded[1:], payload)
+	}
+	return encoded
+}
 
 // Encode implements a custom encoding scheme for the wasm worker
 func Encode(data any) (encoded []byte) {

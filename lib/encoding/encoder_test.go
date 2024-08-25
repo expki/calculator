@@ -3,6 +3,7 @@ package encoding_test
 import (
 	"encoding/binary"
 	"encoding/json"
+	"fmt"
 	"math"
 	"reflect"
 	"testing"
@@ -371,6 +372,44 @@ func Test_Encode_Struct3(t *testing.T) {
 	if !reflect.DeepEqual(wantCount, gotCount) {
 		t.Fatalf("Encode(<struct>) = \nwant: %v(%v), \ngot:  %v(%v)", reflect.TypeOf(want), want, reflect.TypeOf(got), got)
 	}
+	inputJson, _ := json.Marshal(input)
+	outputJson, _ := json.Marshal(output)
+	if !reflect.DeepEqual(inputJson, outputJson) {
+		t.Fatalf("Decode(Encode(<struct>)) = \nwant: %v(%v), \ngot:  %v(%v)", reflect.TypeOf(input), input, reflect.TypeOf(output), output)
+	}
+}
+
+// Test_Encode_Struct_Compression ...
+func Test_Encode_Struct_Compression(t *testing.T) {
+	type object struct {
+		a bool
+		A int
+		B []int
+		C struct {
+			D float32
+			E string
+		}
+	}
+	var input object = object{
+		a: true,
+		A: 42,
+		B: []int{42, -42},
+		C: struct {
+			D float32
+			E string
+		}{
+			D: 42.42,
+			E: "hello",
+		},
+	}
+
+	var got []byte = encoding.EncodeWithCompression(input)
+	fmt.Println("compress len:", len(got))
+	output, err := encoding.DecodeWithCompression(got)
+	if err != nil {
+		t.Fatalf("Decode(Encode(<struct>)) err = %v", err)
+	}
+
 	inputJson, _ := json.Marshal(input)
 	outputJson, _ := json.Marshal(output)
 	if !reflect.DeepEqual(inputJson, outputJson) {

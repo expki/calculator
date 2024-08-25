@@ -99,17 +99,16 @@ func (g *Session) handleOutput(conn *websocket.Conn) {
 	for {
 		start := time.Now()
 		// Encode state
-		encodedState := encoding.Encode(g.state)
-		if !bytes.Equal(encodedState, lastEncodedState) {
+		msg := encoding.EncodeWithCompression(g.state)
+		if !bytes.Equal(msg, lastEncodedState) {
 			//Compress message
-			msg := compression.Compress(encodedState)
-			g.sugar.Debugf("message compression: %.2f", float64(len(msg))/float64(len(encodedState)))
+			g.sugar.Debugf("message compression: %.2f", float64(len(msg))/float64(len(msg)))
 			//Send the state to the client
 			if err := conn.WriteMessage(websocket.BinaryMessage, msg); err != nil {
 				g.sugar.Error("Write error:", err)
 				break
 			}
-			lastEncodedState = encodedState
+			lastEncodedState = msg
 		}
 
 		end := time.Since(start)

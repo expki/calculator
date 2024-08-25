@@ -70,13 +70,12 @@ func New(port string, lgc *logic.Logic, usi *userinput.UserInput) *Comms {
 				cancel()
 				return
 			}
-			out, err := compression.Decompress(msg)
+			data, err := encoding.DecodeWithCompression(msg)
 			if err != nil {
 				log.Printf("websocket.Message.Compress: %v", err)
 				cancel()
 				return
 			}
-			data, _ := encoding.Decode(out)
 			state, done := lgc.LockState()
 			err = encoding.Engrain(data.(map[string]any), state)
 			if err != nil {

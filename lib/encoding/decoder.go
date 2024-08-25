@@ -5,7 +5,23 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+
+	"github.com/expki/calculator/lib/compression"
 )
+
+func DecodeWithCompression(encoded []byte) (data any, err error) {
+	var msg []byte
+	if encoded[0] == 1 {
+		msg, err = compression.Decompress(encoded[1:])
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		msg = encoded[1:]
+	}
+	data, _ = Decode(msg)
+	return data, nil
+}
 
 // Decode ...
 func Decode(encoded []byte) (data any, length int) {
