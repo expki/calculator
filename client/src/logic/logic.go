@@ -57,10 +57,11 @@ func New(port string, sharedArray js.Value) *Logic {
 		}
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 		defer cancel()
+		logic.connectLock.Lock()
 		err = logic.conn.Write(ctx, websocket.MessageBinary, msg)
+		logic.connectLock.Unlock()
 		if err != nil {
 			log.Printf("websocket.Message.Send exception: %v", err)
-			logic.connect()
 			return
 		}
 		lastMsg = msg
