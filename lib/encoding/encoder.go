@@ -130,8 +130,12 @@ func Encode(data any) (encoded []byte) {
 			if !info.IsExported() {
 				continue
 			}
+			name := info.Name
+			if tag := info.Tag.Get("expki"); tag != "" {
+				name = tag
+			}
 			fieldValue := value.Field(idx).Interface()
-			data = append(data, objValue(info.Name, fieldValue)...)
+			data = append(data, objValue(name, fieldValue)...)
 			count++
 		}
 		encoded = make([]byte, 5+len(data))

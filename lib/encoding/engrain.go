@@ -23,6 +23,12 @@ func Engrain(data map[string]any, dst any) (err error) {
 	// engrain data into dst
 	for key, value := range data {
 		field := dstStruct.FieldByName(key)
+		for i := 0; i < field.Type().NumField(); i++ {
+			if field.Type().Field(i).Tag.Get("expki") == key {
+				field = dstStruct.Field(i)
+				break
+			}
+		}
 		if !field.IsValid() {
 			continue
 		}
