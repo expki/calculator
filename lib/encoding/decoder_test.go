@@ -1,6 +1,7 @@
 package encoding_test
 
 import (
+	"bytes"
 	"encoding/binary"
 	"encoding/json"
 	"math"
@@ -203,6 +204,58 @@ func Test_Decode_Map(t *testing.T) {
 
 	var got any
 	got, _ = encoding.Decode(input)
+	var output []byte = encoding.Encode(got)
+
+	wantJson, _ := json.Marshal(want)
+	gotJson, _ := json.Marshal(got)
+	if !reflect.DeepEqual(string(wantJson), string(gotJson)) {
+		t.Fatalf("Decode(<object>) = \nwant: %v(%v), \ngot:  %v(%v)", reflect.TypeOf(want), want, reflect.TypeOf(got), got)
+	}
+	inputCount := make(map[uint8]int)
+	outputCount := make(map[uint8]int)
+	for i := 0; i < len(input); i++ {
+		inputCount[input[i]]++
+	}
+	for i := 0; i < len(output); i++ {
+		outputCount[output[i]]++
+	}
+	if !reflect.DeepEqual(inputCount, outputCount) {
+		t.Fatalf("Encode(Decode(<object>)) = \nwant: %v(%v), \ngot:  %v(%v)", reflect.TypeOf(input), input, reflect.TypeOf(output), output)
+	}
+}
+
+// Test_Decode_Map ...
+func Test_DecodeIO_Map(t *testing.T) {
+	var want map[string]any = map[string]any{
+		"A": 42,
+		"B": []int{42, -42},
+		"C": map[string]any{
+			"D": 42.42,
+			"E": "hello",
+		},
+	}
+	var input []byte = []byte{
+		byte(encoding.Type_object), 3, 0, 0, 0,
+		// A
+		1, 0, 0, 0, 'A', byte(encoding.Type_uint8), 42,
+		// B
+		1, 0, 0, 0, 'B', byte(encoding.Type_array), 2, 0, 0, 0,
+		byte(encoding.Type_uint8), 42,
+		byte(encoding.Type_int32), 0, 0, 0, 0,
+		// C
+		1, 0, 0, 0, 'C', byte(encoding.Type_object), 2, 0, 0, 0,
+		// D
+		1, 0, 0, 0, 'D', byte(encoding.Type_float32), 0, 0, 0, 0,
+		// E
+		1, 0, 0, 0, 'E', byte(encoding.Type_string), 5, 0, 0, 0,
+		'h', 'e', 'l', 'l', 'o',
+	}
+	binary.LittleEndian.PutUint32(input[25:29], 42)
+	input[25] |= byte(128)
+	binary.LittleEndian.PutUint32(input[45:49], math.Float32bits(42.42))
+
+	var got any
+	got, _ = encoding.DecodeIO(bytes.NewReader(input))
 	var output []byte = encoding.Encode(got)
 
 	wantJson, _ := json.Marshal(want)
