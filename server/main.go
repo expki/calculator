@@ -12,10 +12,9 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/klauspost/compress/zstd"
-	"github.com/quic-go/quic-go"
-	"github.com/quic-go/quic-go/http3"
 	"go.uber.org/zap"
 	"golang.org/x/net/http2"
 )
@@ -82,31 +81,12 @@ func main() {
 		sugar.Fatalf("http2.Server: %v", err)
 	}
 
-	// HTTP3
-	server3 := http3.Server{
-		Handler: mux,
-		Addr:    cfg.Server.HttpsAddress,
-		TLSConfig: http3.ConfigureTLSConfig(&tls.Config{
-			GetCertificate: cfg.TLS.GetCertificate,
-			ClientAuth:     tls.NoClientCert,
-			MinVersion:     tls.VersionTLS12,
-		}),
-		QUICConfig: &quic.Config{},
-	}
-
 	// Headers middleware
 	middlewareHeaders := func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// WASM headers
 			w.Header().Set("Cross-Origin-Opener-Policy", "same-origin")
 			w.Header().Set("Cross-Origin-Embedder-Policy", "require-corp")
-			// QUIC upgrade middleware
-			if r.ProtoMajor == 2 {
-				err := server3.SetQUICHeaders(w.Header())
-				if err != nil {
-					sugar.Errorf("SetQUICHeaders failed: %v", err)
-				}
-			}
 			h.ServeHTTP(w, r)
 		})
 	}
@@ -154,15 +134,6 @@ func main() {
 		}
 		close(server2Done)
 	}()
-	server3Done := make(chan struct{})
-	go func() {
-		sugar.Infof("HTTP3 server starting on %s", cfg.Server.HttpsAddress)
-		err := server3.ListenAndServe()
-		if err != nil && err != http.ErrServerClosed {
-			sugar.Errorf("ListenAndServe https (quic): %v", err)
-		}
-		close(server3Done)
-	}()
 
 	// Interrupt signal
 	interrupt := make(chan os.Signal, 1)
@@ -178,14 +149,15 @@ func main() {
 		sugar.Info("HTTP server stopped")
 	case <-server2Done:
 		sugar.Info("HTTP2 server stopped")
-	case <-server3Done:
-		sugar.Info("HTTP3 server stopped")
 	}
-	stopApp()
+	sugar.Info("Server shutting down")
+	shutdownCtx, cancelShutdown := context.WithTimeout(appCtx, 3*time.Second)
+	defer cancelShutdown()
+	server.Shutdown(shutdownCtx)
+	server2.Shutdown(shutdownCtx)
 	server.Close()
 	server2.Close()
-	server3.Close()
-
+	stopApp()
 	sugar.Info("Server stopped")
 }
 
