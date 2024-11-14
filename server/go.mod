@@ -1,6 +1,6 @@
 module calculator
 
-go 1.23.0
+go 1.23.3
 
 require (
 	github.com/expki/calculator/lib v0.0.0-20240825055908-38aacee2dcb1
