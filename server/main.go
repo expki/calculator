@@ -3,6 +3,7 @@ package main
 import (
 	"calculator/config"
 	"calculator/game"
+	"calculator/logger"
 	"calculator/public"
 	"context"
 	"crypto/tls"
@@ -46,16 +47,14 @@ func main() {
 	}
 
 	// Logger
-	logger, err := zap.NewDevelopment()
+	l, err := zap.NewDevelopment()
 	if err != nil {
 		log.Fatalf("zap.NewDevelopment: %v", err)
 	}
-	defer logger.Sync()
-	sugar := logger.Sugar()
-	defer sugar.Sync()
+	logger.Initialize(l)
 
 	// Game
-	engine := game.New(logger)
+	engine := game.New(appCtx)
 
 	// Create mux
 	mux := http.NewServeMux()
@@ -78,7 +77,7 @@ func main() {
 	}
 	err = http2.ConfigureServer(&server2, &http2.Server{})
 	if err != nil {
-		sugar.Fatalf("http2.Server: %v", err)
+		logger.Sugar().Fatalf("http2.Server: %v", err)
 	}
 
 	// Headers middleware
@@ -101,7 +100,7 @@ func main() {
 			w.Header().Set("Content-Encoding", "zstd")
 			encoder, err := zstd.NewWriter(w, zstd.WithEncoderLevel(zstd.SpeedFastest))
 			if err != nil {
-				sugar.Errorf("Failed to create zstd encoder: %v", err)
+				logger.Sugar().Errorf("Failed to create zstd encoder: %v", err)
 				h.ServeHTTP(w, r)
 				return
 			}
@@ -118,19 +117,19 @@ func main() {
 	// Start servers
 	serverDone := make(chan struct{})
 	go func() {
-		sugar.Infof("HTTP server starting on %s", cfg.Server.HttpAddress)
+		logger.Sugar().Infof("HTTP server starting on %s", cfg.Server.HttpAddress)
 		err := server.ListenAndServe()
 		if err != nil && err != http.ErrServerClosed {
-			sugar.Errorf("ListenAndServe http: %v", err)
+			logger.Sugar().Errorf("ListenAndServe http: %v", err)
 		}
 		close(serverDone)
 	}()
 	server2Done := make(chan struct{})
 	go func() {
-		sugar.Infof("HTTP2 server starting on %s", cfg.Server.HttpsAddress)
+		logger.Sugar().Infof("HTTP2 server starting on %s", cfg.Server.HttpsAddress)
 		err := server2.ListenAndServeTLS("", "")
 		if err != nil && err != http.ErrServerClosed {
-			sugar.Errorf("ListenAndServe https (http2): %v", err)
+			logger.Sugar().Errorf("ListenAndServe https (http2): %v", err)
 		}
 		close(server2Done)
 	}()
@@ -142,15 +141,15 @@ func main() {
 	// Wait for servers to finish
 	select {
 	case <-interrupt:
-		sugar.Info("Interrupt signal received")
+		logger.Sugar().Info("Interrupt signal received")
 	case <-appCtx.Done():
-		sugar.Info("App stopped")
+		logger.Sugar().Info("App stopped")
 	case <-serverDone:
-		sugar.Info("HTTP server stopped")
+		logger.Sugar().Info("HTTP server stopped")
 	case <-server2Done:
-		sugar.Info("HTTP2 server stopped")
+		logger.Sugar().Info("HTTP2 server stopped")
 	}
-	sugar.Info("Server shutting down")
+	logger.Sugar().Info("Server shutting down")
 	shutdownCtx, cancelShutdown := context.WithTimeout(appCtx, 3*time.Second)
 	defer cancelShutdown()
 	server.Shutdown(shutdownCtx)
@@ -158,7 +157,7 @@ func main() {
 	server.Close()
 	server2.Close()
 	stopApp()
-	sugar.Info("Server stopped")
+	logger.Sugar().Info("Server stopped")
 }
 
 // zstdResponseWriter wraps the http.ResponseWriter to provide zstd compression

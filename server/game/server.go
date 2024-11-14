@@ -1,8 +1,10 @@
 package game
 
 import (
+	"calculator/logger"
 	"net/http"
 
+	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
@@ -23,18 +25,36 @@ func (g *Game) UpgradeHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	// Upgrade initial GET request to a WebSocket
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		g.sugar.Error("Upgrade error:", err)
+		logger.Sugar().Error("Upgrade error:", err)
 		return
 	}
 	defer conn.Close()
+
 	// Create a new session
-	session := NewSession(g.logger, g.sugar, conn, &g.state)
-	// Add session to state
-	g.state.AddMember(session.Id.String(), 0, 0)
+	id := uuid.New()
+	session := NewSession(id, conn, &g.state)
+
+	// Add member to state
+	g.stateLock.Lock()
+	g.state.AddMember(id.String(), 0, 0)
+	g.stateLock.Unlock()
+	// Add session to client map
+	g.clientLock.Lock()
+	g.clientMap[id] = session
+	g.clientLock.Unlock()
+
 	// Wait for session to close
 	err = session.Wait()
 	if err != nil {
-		g.sugar.Errorf("Session closed with error: %v", err)
+		logger.Sugar().Errorf("Session closed with error: %v", err)
 	}
-	g.state.RemoveMember(session.Id.String())
+
+	// Remove member from state
+	g.stateLock.Lock()
+	g.state.RemoveMember(id.String())
+	g.stateLock.Unlock()
+	// Remove session from client map
+	g.clientLock.Lock()
+	delete(g.clientMap, id)
+	g.clientLock.Unlock()
 }

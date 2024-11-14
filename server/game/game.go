@@ -1,23 +1,30 @@
 package game
 
 import (
+	"context"
+	"sync"
+
 	"github.com/expki/calculator/lib/schema"
-	"go.uber.org/zap"
+	"github.com/google/uuid"
 )
 
 type Game struct {
-	logger *zap.Logger
-	sugar  *zap.SugaredLogger
-	state  schema.Global
+	appCtx     context.Context
+	stateLock  sync.RWMutex
+	state      schema.Global
+	clientLock sync.RWMutex
+	clientMap  map[uuid.UUID]*Session
 }
 
-func New(logger *zap.Logger) *Game {
-	return &Game{
-		logger: logger,
-		sugar:  logger.Sugar(),
+func New(appCtx context.Context) *Game {
+	game := &Game{
+		appCtx:    appCtx,
+		clientMap: make(map[uuid.UUID]*Session),
 		state: schema.Global{
 			Calculator: schema.Calculator{},
 			Members:    make(map[string]*schema.Member),
 		},
 	}
+	go game.gameLoop()
+	return game
 }

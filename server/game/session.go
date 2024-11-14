@@ -1,39 +1,30 @@
 package game
 
 import (
-	"bytes"
-	"time"
+	"calculator/logger"
 
 	"github.com/expki/calculator/lib/encoding"
 	"github.com/expki/calculator/lib/schema"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
-	"go.uber.org/zap"
 )
 
-const tick_rate = time.Second / 60
-
 type Session struct {
-	Id     uuid.UUID
-	state  *schema.Global
-	logger *zap.Logger
-	sugar  *zap.SugaredLogger
-	done   chan error
-	conn   *websocket.Conn
+	Id    uuid.UUID
+	state *schema.Global
+	done  chan error
+	conn  *websocket.Conn
 }
 
-func NewSession(logger *zap.Logger, sugar *zap.SugaredLogger, conn *websocket.Conn, state *schema.Global) *Session {
+func NewSession(id uuid.UUID, conn *websocket.Conn, state *schema.Global) *Session {
 	s := &Session{
-		Id:     uuid.New(),
-		logger: logger,
-		sugar:  sugar,
-		done:   make(chan error),
-		conn:   conn,
-		state:  state,
+		Id:    id,
+		done:  make(chan error, 1),
+		conn:  conn,
+		state: state,
 	}
-	go s.handleInput(conn)
-	go s.handleOutput(conn)
+	go s.handleInput()
 	return s
 }
 
@@ -42,70 +33,41 @@ func (s *Session) Wait() error {
 }
 
 // handleInput handles client inputs
-func (g *Session) handleInput(conn *websocket.Conn) {
-	defer func() {
-		select {
-		case <-g.done:
-			return
-		default:
-			close(g.done)
-		}
-		conn.Close()
-	}()
+func (s *Session) handleInput() {
 	for {
 		// Read message from browser
-		mt, message, err := conn.ReadMessage()
+		mt, message, err := s.conn.ReadMessage()
 		if err != nil {
-			g.sugar.Error("Read error:", err)
-			break // Exit the loop on error
+			logger.Sugar().Error("Read error:", err)
+			close(s.done)
+			s.conn.Close()
+			return // End the session
 		}
-		switch mt {
-		case websocket.BinaryMessage:
+		// Handle message
+		func() {
+			if mt != websocket.BinaryMessage {
+				logger.Sugar().Errorf("Invalid message type: %d", mt)
+				return
+			}
 			// Decode the message
-			data, _ := encoding.DecodeWithCompression(message)
+			data, err := encoding.DecodeWithCompression(message)
+			if err != nil {
+				logger.Sugar().Errorf("Decode error: %v", err)
+				return
+			}
 			var userIn schema.Input
 			err = encoding.Engrain(data.(map[string]any), &userIn)
 			if err != nil {
-				g.sugar.Errorf("Decode client message")
-				continue
+				logger.Sugar().Errorf("Decode client message")
+				return
 			}
-			me := g.state.GetMember(g.Id.String())
+			me := s.state.GetMember(s.Id.String())
+			if me == nil {
+				logger.Sugar().Errorf("Member not found: %s", s.Id.String())
+				return
+			}
 			me.SetX(userIn.X)
 			me.SetY(userIn.Y)
-		default:
-			g.sugar.Errorf("Invalid message type: %d", mt)
-		}
-	}
-}
-
-// handleOutput keeps the client up to date with latest state
-func (g *Session) handleOutput(conn *websocket.Conn) {
-	defer func() {
-		select {
-		case <-g.done:
-			return
-		default:
-			close(g.done)
-		}
-		conn.Close()
-	}()
-	var lastEncodedState []byte
-	for {
-		start := time.Now()
-		// Encode state
-		msg := encoding.EncodeWithCompression(g.state)
-		if !bytes.Equal(msg, lastEncodedState) {
-			//Send the state to the client
-			if err := conn.WriteMessage(websocket.BinaryMessage, msg); err != nil {
-				g.sugar.Error("Write error:", err)
-				break
-			}
-			lastEncodedState = msg
-		}
-
-		end := time.Since(start)
-		if end < tick_rate {
-			time.Sleep(tick_rate - end)
-		}
+		}()
 	}
 }
