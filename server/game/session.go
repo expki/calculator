@@ -15,6 +15,7 @@ type Session struct {
 	state *schema.Global
 	done  chan error
 	conn  *websocket.Conn
+	send  chan []byte
 }
 
 func NewSession(id uuid.UUID, conn *websocket.Conn, state *schema.Global) *Session {
@@ -23,8 +24,10 @@ func NewSession(id uuid.UUID, conn *websocket.Conn, state *schema.Global) *Sessi
 		done:  make(chan error, 1),
 		conn:  conn,
 		state: state,
+		send:  make(chan []byte, 1),
 	}
 	go s.handleInput()
+	go s.handleOutput()
 	return s
 }
 
@@ -69,5 +72,29 @@ func (s *Session) handleInput() {
 			me.SetX(userIn.X)
 			me.SetY(userIn.Y)
 		}()
+	}
+}
+
+// Send sends a message to the client
+func (s *Session) handleOutput() {
+	for {
+		select {
+		case <-s.done:
+			return
+		case msg := <-s.send:
+			err := s.conn.WriteMessage(websocket.BinaryMessage, msg)
+			if err != nil {
+				logger.Sugar().Error("Write error:", err)
+			}
+		}
+	}
+}
+
+func (s *Session) TrySend(msg []byte) bool {
+	select {
+	case s.send <- msg:
+		return true
+	default:
+		return false
 	}
 }

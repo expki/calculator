@@ -9,6 +9,10 @@ import (
 // CreateSample creates a sample configuration file.
 func CreateSample(path string) error {
 	sample := Config{
+		Server: ConfigServer{
+			HttpAddress:  ":7000",
+			HttpsAddress: ":7001",
+		},
 		TLS: &ConfigTLS{
 			DomainNameServer: []string{},
 			IP:               []string{},

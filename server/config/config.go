@@ -23,7 +23,6 @@ type Config struct {
 }
 
 type ConfigServer struct {
-	BaseURL      string `json:"base_url"`
 	HttpAddress  string `json:"http_address"`
 	HttpsAddress string `json:"https_address"`
 }

@@ -13,6 +13,8 @@ import (
 	"github.com/expki/calculator/lib/schema"
 )
 
+const game_tick_rate = time.Second / 60
+
 type Logic struct {
 	url  string
 	conn *websocket.Conn
@@ -57,7 +59,7 @@ func New(port string, sharedArray js.Value) *Logic {
 		defer cancel()
 		err = logic.conn.Write(ctx, websocket.MessageBinary, msg)
 		if err != nil {
-			log.Printf("websocket.Message.Send exception: %v", err)
+			log.Fatalf("websocket.Message.Send exception: %v", err)
 			return
 		}
 		lastMsg = msg
@@ -97,33 +99,37 @@ func New(port string, sharedArray js.Value) *Logic {
 	// Server → Client (self)
 	go func() {
 		var lastStateData []byte
+		var pref float32
 		for {
 			func() {
 				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
 				defer cancel()
 				_, msg, err := logic.conn.Read(ctx)
 				if err != nil {
-					log.Printf("websocket.Message.Read exception: %v", err)
+					log.Fatalf("websocket.Message.Read exception: %v", err)
 					return
 				}
+				prefStart := time.Now()
 				data, err := encoding.DecodeWithCompression(msg)
 				if err != nil {
-					log.Printf("websocket.Message.Compress exception: %v", err)
+					log.Fatalf("websocket.Message.Compress exception: %v", err)
 					return
 				}
 				var global schema.Global
 				err = encoding.Engrain(data.(map[string]any), &global)
 				if err != nil {
-					log.Printf("encoding.Engrain exception: %v", err)
+					log.Fatalf("encoding.Engrain exception: %v", err)
 					return
 				}
 				state := types.State{
-					Global: global,
+					Global:   global,
+					CpuLogic: pref,
 				}
 				stateData := encoding.Encode(state)
 				if !bytes.Equal(lastStateData, stateData) {
 					js.CopyBytesToJS(sharedArray, stateData)
 					lastStateData = stateData
+					pref = float32(time.Duration(time.Since(prefStart).Nanoseconds())) / float32(game_tick_rate)
 				}
 			}()
 		}

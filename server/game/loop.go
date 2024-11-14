@@ -3,17 +3,17 @@ package game
 import (
 	"bytes"
 	"calculator/logger"
-	"sync"
 	"time"
 
 	"github.com/expki/calculator/lib/encoding"
-	"github.com/gorilla/websocket"
+	"github.com/google/uuid"
 )
 
 const game_tick_rate = time.Second / 60
 
 func (g *Game) gameLoop() {
 	var lastEncodedState []byte
+	var lastClients = make(map[uuid.UUID]struct{})
 	ticker := time.NewTicker(game_tick_rate)
 	for {
 		select {
@@ -38,27 +38,25 @@ func (g *Game) gameLoop() {
 		// Encode game state
 		g.stateLock.RLock()
 		msg := encoding.EncodeWithCompression(g.state)
-		g.stateLock.Unlock()
-
-		// Skip if state hasn't changed
-		if bytes.Equal(msg, lastEncodedState) {
-			continue
-		}
+		g.stateLock.RUnlock()
 
 		// Send game state to all clients
 		g.clientLock.RLock()
-		var wg sync.WaitGroup
-		wg.Add(len(g.clientMap))
 		for _, client := range g.clientMap {
-			go func() {
-				err := client.conn.WriteMessage(websocket.BinaryMessage, msg)
-				if err != nil {
-					logger.Sugar().Error("Write error %s:", client.Id.String(), err)
-				}
-				wg.Done()
-			}()
+			// Skip if client and state hasn't changed
+			if _, ok := lastClients[client.Id]; ok && bytes.Equal(msg, lastEncodedState) {
+				continue
+			}
+			if ok := client.TrySend(msg); !ok {
+				logger.Sugar().Debugf("Client is not ready to receive message: %s", client.Id.String())
+				continue
+			}
+		}
+		lastEncodedState = msg
+		lastClients = make(map[uuid.UUID]struct{})
+		for _, client := range g.clientMap {
+			lastClients[client.Id] = struct{}{}
 		}
 		g.clientLock.RUnlock()
-		wg.Wait()
 	}
 }

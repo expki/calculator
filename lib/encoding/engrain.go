@@ -11,6 +11,7 @@ func Engrain(data map[string]any, dst any) (err error) {
 	if data == nil {
 		return nil
 	}
+
 	// validate input dst
 	if reflect.TypeOf(dst).Kind() != reflect.Ptr {
 		return errors.New("engrain dst must be a pointer")
@@ -22,13 +23,8 @@ func Engrain(data map[string]any, dst any) (err error) {
 	dstStruct := reflect.ValueOf(dst).Elem()
 	// engrain data into dst
 	for key, value := range data {
+		//fmt.Printf("key: %s, value: %+v, kind: %d\n", key, value, dstStruct.Kind())
 		field := dstStruct.FieldByName(key)
-		for i := 0; i < field.Type().NumField(); i++ {
-			if field.Type().Field(i).Tag.Get("expki") == key {
-				field = dstStruct.Field(i)
-				break
-			}
-		}
 		if !field.IsValid() {
 			continue
 		}
@@ -36,12 +32,14 @@ func Engrain(data map[string]any, dst any) (err error) {
 			continue
 		}
 		if field.Kind() == reflect.Struct {
+			//fmt.Println("struct")
 			if err = Engrain(value.(map[string]any), field.Addr().Interface()); err != nil {
 				return err
 			}
 			continue
 		}
 		if field.Kind() == reflect.Slice && field.Type().Elem().Kind() == reflect.Struct {
+			//fmt.Println("array struct")
 			slice := reflect.MakeSlice(field.Type(), 0, field.Cap())
 			if value == nil {
 				continue
@@ -58,6 +56,7 @@ func Engrain(data map[string]any, dst any) (err error) {
 		}
 		// todo: fix this mess
 		if field.Kind() == reflect.Slice && field.Type().Elem().Kind() == reflect.Pointer {
+			//fmt.Println("array pointer struct")
 			slice := reflect.MakeSlice(field.Type(), 0, field.Cap())
 			if value == nil {
 				continue
@@ -75,6 +74,7 @@ func Engrain(data map[string]any, dst any) (err error) {
 			continue
 		}
 		if field.Kind() == reflect.Map && field.Type().Elem().Kind() == reflect.Struct {
+			//fmt.Println("map struct")
 			mp := reflect.MakeMap(field.Type())
 			for _, key := range reflect.ValueOf(value).MapKeys() {
 				itemStruct := reflect.New(field.Type().Elem()).Elem()
@@ -87,6 +87,7 @@ func Engrain(data map[string]any, dst any) (err error) {
 			continue
 		}
 		if field.Kind() == reflect.Map && field.Type().Elem().Kind() == reflect.Pointer {
+			//fmt.Println("map pointer struct")
 			mp := reflect.MakeMap(field.Type())
 			for _, key := range reflect.ValueOf(value).MapKeys() {
 				itemStruct := reflect.New(field.Type().Elem().Elem()).Elem()
@@ -101,10 +102,12 @@ func Engrain(data map[string]any, dst any) (err error) {
 			continue
 		}
 		if field.Kind() == reflect.Ptr {
+			//fmt.Println("pointer value")
 			ptrValue := reflect.New(field.Type().Elem())
 			ptrValue.Elem().Set(reflect.ValueOf(value))
 			field.Set(ptrValue)
 		} else {
+			//fmt.Println("value")
 			field.Set(reflect.ValueOf(value))
 		}
 	}

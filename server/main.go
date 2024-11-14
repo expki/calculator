@@ -24,18 +24,19 @@ func main() {
 	appCtx, stopApp := context.WithCancel(context.Background())
 
 	// Load config
-	if len(os.Args) < 2 {
-		log.Fatal("Usage: ", os.Args[0], " <config.json>")
+	var configPath string = "config.json"
+	if len(os.Args) > 2 {
+		configPath = os.Args[1]
 	}
-	if _, err := os.Stat(os.Args[1]); os.IsNotExist(err) {
-		err = config.CreateSample(os.Args[1])
+	if _, err := os.Stat(configPath); os.IsNotExist(err) {
+		err = config.CreateSample(configPath)
 		if err != nil {
 			log.Fatalf("CreateSample: %v", err)
 		}
 	}
-	configRaw, err := os.ReadFile(os.Args[1])
+	configRaw, err := os.ReadFile(configPath)
 	if err != nil {
-		log.Fatalf("ReadFile %q: %v", os.Args[1], err)
+		log.Fatalf("ReadFile %q: %v", configPath, err)
 	}
 	cfg, err := config.ParseConfig(configRaw)
 	if err != nil {

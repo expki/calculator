@@ -7,27 +7,15 @@ import (
 	"net/url"
 	"strconv"
 	"syscall/js"
-	"time"
 
 	"github.com/coder/websocket"
 )
 
 func (c *Logic) connect() {
-	for {
-		if success := func() bool {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			var err error
-			c.conn, _, err = websocket.Dial(ctx, c.url, nil)
-			if err != nil {
-				log.Printf("websocket.Dial exception: %v", err)
-				return false
-			}
-			return true
-		}(); success {
-			return
-		}
-		log.Println("failed to connect, retrying every 3 seconds")
+	var err error
+	c.conn, _, err = websocket.Dial(context.Background(), c.url, nil)
+	if err != nil {
+		log.Fatalf("websocket.Dial exception: %v", err)
 	}
 }
 
