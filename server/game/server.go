@@ -32,6 +32,7 @@ func (g *Game) UpgradeHandlerFunc(w http.ResponseWriter, r *http.Request) {
 
 	// Create a new session
 	id := uuid.New()
+
 	session := NewSession(id, conn, &g.state)
 
 	// Add member to state

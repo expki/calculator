@@ -55,7 +55,7 @@ func New(port string, sharedArray js.Value) *Logic {
 		if bytes.Equal(lastMsg, msg) {
 			return
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		err = logic.conn.Write(ctx, websocket.MessageBinary, msg)
 		if err != nil {
@@ -102,12 +102,16 @@ func New(port string, sharedArray js.Value) *Logic {
 		var pref float32
 		for {
 			func() {
-				ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-				defer cancel()
-				_, msg, err := logic.conn.Read(ctx)
+				t, msg, err := logic.conn.Read(context.Background())
 				if err != nil {
 					log.Fatalf("websocket.Message.Read exception: %v", err)
 					return
+				}
+				switch t {
+				case websocket.MessageBinary:
+					// continue
+				default:
+					log.Fatalf("unexpected message type: %v", t)
 				}
 				prefStart := time.Now()
 				data, err := encoding.DecodeWithCompression(msg)

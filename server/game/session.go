@@ -2,6 +2,7 @@ package game
 
 import (
 	"calculator/logger"
+	"time"
 
 	"github.com/expki/calculator/lib/encoding"
 	"github.com/expki/calculator/lib/schema"
@@ -26,6 +27,7 @@ func NewSession(id uuid.UUID, conn *websocket.Conn, state *schema.Global) *Sessi
 		state: state,
 		send:  make(chan []byte, 1),
 	}
+	go s.handlePing()
 	go s.handleInput()
 	go s.handleOutput()
 	return s
@@ -33,6 +35,25 @@ func NewSession(id uuid.UUID, conn *websocket.Conn, state *schema.Global) *Sessi
 
 func (s *Session) Wait() error {
 	return <-s.done
+}
+
+func (s *Session) handlePing() {
+	// Set up a ticker to send ping messages periodically
+	ticker := time.NewTicker(30 * time.Second)
+	for {
+		select {
+		case <-s.done:
+			ticker.Stop()
+			return
+		case <-ticker.C:
+			// Send a ping message
+			if err := s.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
+				logger.Sugar().Errorf("Ping error %s: %v", s.Id.String(), err)
+				close(s.done)
+				s.conn.Close()
+			}
+		}
+	}
 }
 
 // handleInput handles client inputs
@@ -48,6 +69,10 @@ func (s *Session) handleInput() {
 		}
 		// Handle message
 		func() {
+			if mt == websocket.PongMessage {
+				logger.Sugar().Debugf("Pong message: %s", s.Id.String())
+				return // Ignore pong messages
+			}
 			if mt != websocket.BinaryMessage {
 				logger.Sugar().Errorf("Invalid message type: %d", mt)
 				return
