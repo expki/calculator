@@ -25,7 +25,7 @@ func main() {
 
 	// Load config
 	var configPath string = "config.json"
-	if len(os.Args) > 2 {
+	if len(os.Args) > 1 {
 		configPath = os.Args[1]
 	}
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {

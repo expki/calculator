@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"math"
 	"reflect"
+	"slices"
+	"strings"
 
 	"github.com/expki/calculator/lib/compression"
 )
@@ -123,8 +125,8 @@ func Encode(data any) (encoded []byte) {
 		}
 	case reflect.Struct:
 		objType := value.Type()
-		data := make([]byte, 0)
 		var count uint32 = 0
+		items := unordered{}
 		for idx := 0; idx < value.NumField(); idx++ {
 			info := objType.Field(idx)
 			if !info.IsExported() {
@@ -135,19 +137,27 @@ func Encode(data any) (encoded []byte) {
 				name = tag
 			}
 			fieldValue := value.Field(idx).Interface()
-			data = append(data, objValue(name, fieldValue)...)
+			items.add(name, fieldValue)
 			count++
+		}
+		data := make([]byte, 0)
+		for _, item := range items.ordered() {
+			data = append(data, objValue(item.name, item.value)...)
 		}
 		encoded = make([]byte, 5+len(data))
 		encoded[0] = byte(Type_object)
 		binary.LittleEndian.PutUint32(encoded[1:5], count)
 		copy(encoded[5:], data)
 	case reflect.Map:
-		data := make([]byte, 0)
 		var count uint32
+		items := unordered{}
 		for _, key := range value.MapKeys() {
-			data = append(data, objValue(key.String(), value.MapIndex(key).Interface())...)
+			items.add(key.String(), value.MapIndex(key).Interface())
 			count++
+		}
+		data := make([]byte, 0)
+		for _, item := range items.ordered() {
+			data = append(data, objValue(item.name, item.value)...)
 		}
 		encoded = make([]byte, 5+len(data))
 		encoded[0] = byte(Type_object)
@@ -168,4 +178,24 @@ func objValue(key string, value any) []byte {
 	// value
 	copy(bytes[4+keyLen:4+keyLen+dataLen], data)
 	return bytes
+}
+
+type item struct {
+	name  string
+	value any
+}
+
+type unordered struct {
+	items []item
+}
+
+func (u *unordered) add(name string, value any) {
+	u.items = append(u.items, item{name, value})
+}
+
+func (u *unordered) ordered() []item {
+	slices.SortFunc(u.items, func(prev, next item) int {
+		return strings.Compare(prev.name, next.name)
+	})
+	return u.items
 }
