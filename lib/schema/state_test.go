@@ -9,15 +9,15 @@ import (
 
 // Test_Global_Encode ...
 func Test_Global_Encode(t *testing.T) {
-	input := schema.Global{
+	input := schema.State{
 		Calculator: schema.Calculator{},
-		Members:    map[string]*schema.Member{"test": {}},
+		Members:    []schema.Member{{}},
 	}
 	data := encoding.Encode(&input)
 	generic, _ := encoding.Decode(data)
-	var output schema.Global
+	var output schema.State
 	err := encoding.Engrain(generic.(map[string]any), &output)
 	if err != nil {
-		t.Fatalf("Engrain(Decode(Encode(<*global>))) = %v", err)
+		t.Fatalf("Engrain(Decode(Encode(<*state>))) = %v", err)
 	}
 }

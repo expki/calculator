@@ -1,5 +1,5 @@
 module github.com/expki/calculator/lib
 
-go 1.23.3
+go 1.24.3
 
-require github.com/klauspost/compress v1.17.9
+require github.com/klauspost/compress v1.18.0
