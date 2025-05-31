@@ -3,17 +3,17 @@ package game
 import (
 	"bytes"
 	"calculator/logger"
+	"encoding/json"
 	"time"
 
 	"github.com/expki/calculator/lib/encoding"
-	"github.com/google/uuid"
 )
 
 const game_tick_rate = time.Second / 60
 
 func (g *Game) gameLoop() {
 	var lastEncodedState []byte
-	var lastClients = make(map[uuid.UUID]struct{})
+	var lastClients = make(map[int]struct{})
 	ticker := time.NewTicker(game_tick_rate)
 	for {
 		select {
@@ -28,17 +28,17 @@ func (g *Game) gameLoop() {
 		clientCount := len(g.state.Members)
 		g.stateLock.RUnlock()
 		if clientCount == 0 {
+			logger.Logger().Debug("no clients...")
 			continue
 		}
 
-		// Update game state
-		//g.stateLock.Lock()
-		//g.stateLock.Unlock()
-
 		// Encode game state
 		g.stateLock.RLock()
-		msg := encoding.EncodeWithCompression(g.state)
+		msg := encoding.EncodeWithCompression(g.state.State())
 		g.stateLock.RUnlock()
+
+		ssss, _ := json.Marshal(g.state.State())
+		logger.Logger().Debug(string(ssss))
 
 		// Send game state to all clients
 		g.clientLock.RLock()
@@ -48,12 +48,12 @@ func (g *Game) gameLoop() {
 				continue
 			}
 			if ok := client.TrySend(msg); !ok {
-				logger.Sugar().Debugf("Client is not ready to receive message: %s", client.Id.String())
+				logger.Sugar().Debugf("Client is not ready to receive message: %d", client.Id)
 				continue
 			}
 		}
 		lastEncodedState = msg
-		lastClients = make(map[uuid.UUID]struct{})
+		lastClients = make(map[int]struct{})
 		for _, client := range g.clientMap {
 			lastClients[client.Id] = struct{}{}
 		}

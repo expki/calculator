@@ -20,16 +20,10 @@ type Logic struct {
 	conn *websocket.Conn
 }
 
-type UserInput struct {
-	width     int
-	height    int
-	key       map[string]bool
-	mouseleft bool
-	mousex    int
-	mousey    int
-}
-
 func New(port string, sharedArray js.Value) *Logic {
+	// Set initial state
+	js.CopyBytesToJS(sharedArray, encoding.Encode(types.LocalState{}))
+
 	// Get server websocket url
 	uri, err := getWebsocketURL(port)
 	if err != nil {
@@ -41,9 +35,6 @@ func New(port string, sharedArray js.Value) *Logic {
 		url:  uri,
 		conn: nil,
 	}
-
-	// Set initial state
-	js.CopyBytesToJS(sharedArray, encoding.Encode(types.State{}))
 
 	// Connect to the server
 	logic.connect()
@@ -65,24 +56,12 @@ func New(port string, sharedArray js.Value) *Logic {
 		lastMsg = msg
 	}
 	window := js.Global()
-	userInput := UserInput{key: make(map[string]bool)}
+	userInput := LocalInput{}
 	window.Set("handleInput", js.FuncOf(func(this js.Value, args []js.Value) any {
 		if len(args) < 1 {
 			return nil
 		}
 		arg := args[0]
-		if value := arg.Get("width"); !value.IsUndefined() {
-			userInput.width = value.Int()
-		}
-		if value := arg.Get("height"); !value.IsUndefined() {
-			userInput.height = value.Int()
-		}
-		if value := arg.Get("keyup"); !value.IsUndefined() {
-			userInput.key[value.String()] = false
-		}
-		if value := arg.Get("keydown"); !value.IsUndefined() {
-			userInput.key[value.String()] = true
-		}
 		if value := arg.Get("mouseleft"); !value.IsUndefined() {
 			userInput.mouseleft = value.Bool()
 		}
@@ -92,7 +71,84 @@ func New(port string, sharedArray js.Value) *Logic {
 		if value := arg.Get("mousey"); !value.IsUndefined() {
 			userInput.mousey = value.Int()
 		}
-		notify(schema.Input{X: userInput.mousex, Y: userInput.mousey})
+		if value := arg.Get("width"); !value.IsUndefined() {
+			userInput.width = value.Int()
+		}
+		if value := arg.Get("height"); !value.IsUndefined() {
+			userInput.height = value.Int()
+		}
+		if value := arg.Get("x"); !value.IsUndefined() {
+			userInput.x = value.Int()
+		}
+		if value := arg.Get("y"); !value.IsUndefined() {
+			userInput.y = value.Int()
+		}
+		// row 1
+		if value := arg.Get("clear"); !value.IsUndefined() {
+			userInput.clear = value.Bool()
+		}
+		if value := arg.Get("bracket"); !value.IsUndefined() {
+			userInput.bracket = value.Bool()
+		}
+		if value := arg.Get("percentage"); !value.IsUndefined() {
+			userInput.percentage = value.Bool()
+		}
+		if value := arg.Get("divide"); !value.IsUndefined() {
+			userInput.divide = value.Bool()
+		}
+		// row 2
+		if value := arg.Get("seven"); !value.IsUndefined() {
+			userInput.seven = value.Bool()
+		}
+		if value := arg.Get("eight"); !value.IsUndefined() {
+			userInput.eight = value.Bool()
+		}
+		if value := arg.Get("nine"); !value.IsUndefined() {
+			userInput.nine = value.Bool()
+		}
+		if value := arg.Get("times"); !value.IsUndefined() {
+			userInput.times = value.Bool()
+		}
+		// row 3
+		if value := arg.Get("four"); !value.IsUndefined() {
+			userInput.four = value.Bool()
+		}
+		if value := arg.Get("five"); !value.IsUndefined() {
+			userInput.five = value.Bool()
+		}
+		if value := arg.Get("six"); !value.IsUndefined() {
+			userInput.six = value.Bool()
+		}
+		if value := arg.Get("minus"); !value.IsUndefined() {
+			userInput.minus = value.Bool()
+		}
+		// row 4
+		if value := arg.Get("one"); !value.IsUndefined() {
+			userInput.one = value.Bool()
+		}
+		if value := arg.Get("two"); !value.IsUndefined() {
+			userInput.two = value.Bool()
+		}
+		if value := arg.Get("three"); !value.IsUndefined() {
+			userInput.three = value.Bool()
+		}
+		if value := arg.Get("plus"); !value.IsUndefined() {
+			userInput.plus = value.Bool()
+		}
+		// row 5
+		if value := arg.Get("negate"); !value.IsUndefined() {
+			userInput.negate = value.Bool()
+		}
+		if value := arg.Get("zero"); !value.IsUndefined() {
+			userInput.zero = value.Bool()
+		}
+		if value := arg.Get("decimal"); !value.IsUndefined() {
+			userInput.decimal = value.Bool()
+		}
+		if value := arg.Get("equals"); !value.IsUndefined() {
+			userInput.equals = value.Bool()
+		}
+		notify(userInput.Translate())
 		return nil
 	}))
 
@@ -119,15 +175,16 @@ func New(port string, sharedArray js.Value) *Logic {
 					log.Fatalf("websocket.Message.Compress exception: %v", err)
 					return
 				}
-				var global schema.Global
+				var global schema.State
 				err = encoding.Engrain(data.(map[string]any), &global)
 				if err != nil {
 					log.Fatalf("encoding.Engrain exception: %v", err)
 					return
 				}
-				state := types.State{
-					Global:   global,
-					CpuLogic: pref,
+				state := types.LocalState{
+					State:   global,
+					Id:      0,
+					CpuLoad: pref,
 				}
 				stateData := encoding.Encode(state)
 				if !bytes.Equal(lastStateData, stateData) {

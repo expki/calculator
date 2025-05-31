@@ -1,5 +1,5 @@
-import * as enums from '../types/enums';
-import type * as types from '../types/types';
+import { PayloadKind } from '../types/enums';
+import type { Payload, PayloadInput, ButtonState } from '../types/types';
 
 export async function listenForUserInput(canvas: HTMLCanvasElement, logic: Worker) {
     // Register input events
@@ -7,108 +7,142 @@ export async function listenForUserInput(canvas: HTMLCanvasElement, logic: Worke
     let mouseLeftState: boolean | undefined;
     let xState: number | undefined;
     let yState: number | undefined;
-    addEventListener("keydown", (ev) => {
-        if (keyState[ev.key] === true) return;
-        keyState[ev.key] = true;
-        const payload: types.Payload<types.PayloadInput> = {
-            kind: enums.PayloadKind.input,
-            payload: {
-                keydown: ev.key,
-            },
-        };
-        logic.postMessage(payload);
-    });
-    addEventListener("keyup", (ev) => {
-        if (keyState[ev.key] === false) return;
-        keyState[ev.key] = false;
-        const payload: types.Payload<types.PayloadInput> = {
-            kind: enums.PayloadKind.input,
-            payload: {
-                keyup: ev.key,
-            },
-        };
-        logic.postMessage(payload);
-    });
     addEventListener("mousedown", (ev) => {
-        let enabled = false;
-        const data: types.PayloadInput = {};
+        if ( !(ev.button === 0 && mouseLeftState !== true) && !(ev.clientX !== xState) && !(ev.clientY !== yState) ) return;
+        const rect = canvas.getBoundingClientRect();
+        let data: PayloadInput = {};
         if (ev.button === 0 && mouseLeftState !== true) {
-            enabled = true;
             data.mouseleft = true;
         }
         if (ev.clientX !== xState) {
-            enabled = true;
             data.mousex = ev.clientX;
+            data.x = ev.clientX - rect.left;
         }
         if (ev.clientY !== yState) {
-            enabled = true;
             data.mousey = ev.clientY;
+            data.y = ev.clientY - rect.top;
         }
-        if (!enabled) return;
-        const payload: types.Payload<types.PayloadInput> = {
-            kind: enums.PayloadKind.input,
+        data = findButtonAtCoordinates(data);
+        const payload: Payload<PayloadInput> = {
+            kind: PayloadKind.input,
             payload: data,
         };
         logic.postMessage(payload);
     });
     addEventListener("mouseup", (ev) => {
-        let enabled = false;
-        const data: types.PayloadInput = {};
+        if ( !(ev.button === 0 && mouseLeftState !== false) && !(ev.clientX !== xState) && !(ev.clientY !== yState) ) return;
+        const rect = canvas.getBoundingClientRect();
+        const data: PayloadInput = {};
         if (ev.button === 0 && mouseLeftState !== false) {
-            enabled = true;
             data.mouseleft = false;
         }
         if (ev.clientX !== xState) {
-            enabled = true;
             data.mousex = ev.clientX;
+            data.x = ev.clientX - rect.left;
         }
         if (ev.clientY !== yState) {
-            enabled = true;
             data.mousey = ev.clientY;
+            data.y = ev.clientY - rect.top;
         }
-        if (!enabled) return;
-        const payload: types.Payload<types.PayloadInput> = {
-            kind: enums.PayloadKind.input,
+        const payload: Payload<PayloadInput> = {
+            kind: PayloadKind.input,
             payload: data,
         };
         logic.postMessage(payload);
     });
     addEventListener("mousemove", (ev) => {
-        let enabled = false;
-        const data: types.PayloadInput = {};
+        if ( !(ev.clientX !== xState) && !(ev.clientY !== yState) ) return;
+        const rect = canvas.getBoundingClientRect();
+        const data: PayloadInput = {};
         if (ev.clientX !== xState) {
-            enabled = true;
             data.mousex = ev.clientX;
+            data.x = ev.clientX - rect.left;
         }
         if (ev.clientY !== yState) {
-            enabled = true;
             data.mousey = ev.clientY;
+            data.y = ev.clientY - rect.top;
         }
-        if (!enabled) return;
-        const payload: types.Payload<types.PayloadInput> = {
-            kind: enums.PayloadKind.input,
-            payload: {
-                mousex: ev.clientX,
-                mousey: ev.clientY,
-            },
+        const payload: Payload<PayloadInput> = {
+            kind: PayloadKind.input,
+            payload: data,
         };
         logic.postMessage(payload);
     });
-    const resizeScreen = (width: number, height: number): void => {
-        let enabled = false;
-        if (canvas.width !== width || canvas.height !== height) {
-            enabled = true;
-            // Set canvas size to window size
-            const dpr = window.devicePixelRatio || 1;
-            canvas.width = window.innerWidth * dpr;
-            canvas.height = window.innerHeight * dpr;
-            canvas.style.width = window.innerWidth + "px";
-            canvas.style.height = window.innerHeight + "px";
-            canvas.getContext("2d").scale(dpr, dpr);
+    addEventListener("touchstart", (ev) => { // equivalent to mousedown
+        const touch = ev.touches[0];
+        if ( !(!mouseLeftState) && !(touch.clientX !== xState) && !(touch.clientY !== yState) ) return;
+        const rect = canvas.getBoundingClientRect();
+        let data: PayloadInput = {};
+        if (!mouseLeftState) {
+            data.mouseleft = true;
         }
-        if (!enabled) return;
-        const payload: types.Payload<types.PayloadInput> = {
-            kind: enums.PayloadKind.input,
+        if (touch.clientX !== xState) {
+            data.mousex = touch.clientX;
+            data.x = touch.clientX - rect.left;
+        }
+        if (touch.clientY !== yState) {
+            data.mousey = touch.clientY;
+            data.y = touch.clientY - rect.top;
+        }
+        data = findButtonAtCoordinates(data);
+        const payload: Payload<PayloadInput> = {
+            kind: PayloadKind.input,
+            payload: data,
+        };
+        logic.postMessage(payload);
+    }, { passive: false });
+    addEventListener("touchend", (ev) => { // equivalent to mouseup
+        const touch = ev.changedTouches[0];
+        if ( !(mouseLeftState) && !(touch.clientX !== xState) && !(touch.clientY !== yState) ) return;
+        const rect = canvas.getBoundingClientRect();
+        const data: PayloadInput = {};
+        if (mouseLeftState) {
+            data.mouseleft = false;
+        }
+        if (touch.clientX !== xState) {
+            data.mousex = touch.clientX;
+            data.x = touch.clientX - rect.left;
+        }
+        if (touch.clientY !== yState) {
+            data.mousey = touch.clientY;
+            data.y = touch.clientY - rect.top;
+        }
+        const payload: Payload<PayloadInput> = {
+            kind: PayloadKind.input,
+            payload: data,
+        };
+        logic.postMessage(payload);
+    }, { passive: false });
+    addEventListener("touchmove", (ev) => { // equivalent to mousemove
+        const touch = ev.touches[0];
+        if ( !(touch.clientX !== xState) && !(touch.clientY !== yState) ) return;
+        const rect = canvas.getBoundingClientRect();
+        const data: PayloadInput = {};
+        if (touch.clientX !== xState) {
+            data.mousex = touch.clientX;
+            data.x = touch.clientX - rect.left;
+        }
+        if (touch.clientY !== yState) {
+            data.mousey = touch.clientY;
+            data.y = touch.clientY - rect.top;
+        }
+        const payload: Payload<PayloadInput> = {
+            kind: PayloadKind.input,
+            payload: data,
+        };
+        logic.postMessage(payload);
+    }, { passive: false });
+    const resizeScreen = (width: number, height: number): void => {
+        if (canvas.width === width && canvas.height === height) return;
+        // Set canvas size to window size
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = window.innerWidth * dpr;
+        canvas.height = window.innerHeight * dpr;
+        canvas.style.width = window.innerWidth + "px";
+        canvas.style.height = window.innerHeight + "px";
+        canvas.getContext("2d").scale(dpr, dpr);
+        const payload: Payload<PayloadInput> = {
+            kind: PayloadKind.input,
             payload: {
                 width: width,
                 height: height,
@@ -116,7 +150,7 @@ export async function listenForUserInput(canvas: HTMLCanvasElement, logic: Worke
         };
         logic.postMessage(payload);
     }
-    let resizeTimeout: NodeJS.Timeout | undefined;
+    let resizeTimeout: NodeJS.Timeout | undefined = undefined;
     addEventListener("resize", () => {
         clearTimeout(resizeTimeout);
         // resize with backoff
@@ -125,3 +159,95 @@ export async function listenForUserInput(canvas: HTMLCanvasElement, logic: Worke
         }, 500);
     });
 }
+
+function findButtonAtCoordinates(data: PayloadInput): PayloadInput {
+    // row 1
+    if (isButtonAtCoordinates(data, global.buttonMap.clear)) {
+        data.clear = true;
+        return data;
+    }
+    if (isButtonAtCoordinates(data, global.buttonMap.bracket)) {
+        data.bracket = true;
+        return data;
+    }
+    if (isButtonAtCoordinates(data, global.buttonMap.percentage)) {
+        data.percentage = true;
+        return data;
+    }
+    if (isButtonAtCoordinates(data, global.buttonMap.divide)) {
+        data.divide = true;
+        return data;
+    }
+    // row 2
+    if (isButtonAtCoordinates(data, global.buttonMap.seven)) {
+        data.seven = true;
+        return data;
+    }
+    if (isButtonAtCoordinates(data, global.buttonMap.eight)) {
+        data.eight = true;
+        return data;
+    }
+    if (isButtonAtCoordinates(data, global.buttonMap.nine)) {
+        data.nine = true;
+        return data;
+    }
+    if (isButtonAtCoordinates(data, global.buttonMap.times)) {
+        data.times = true;
+        return data;
+    }
+    // row 3
+    if (isButtonAtCoordinates(data, global.buttonMap.four)) {
+        data.four = true;
+        return data;
+    }
+    if (isButtonAtCoordinates(data, global.buttonMap.five)) {
+        data.five = true;
+        return data;
+    }
+    if (isButtonAtCoordinates(data, global.buttonMap.six)) {
+        data.six = true;
+        return data;
+    }
+    if (isButtonAtCoordinates(data, global.buttonMap.minus)) {
+        data.minus = true;
+        return data;
+    }
+    // row 4
+    if (isButtonAtCoordinates(data, global.buttonMap.one)) {
+        data.one = true;
+        return data;
+    }
+    if (isButtonAtCoordinates(data, global.buttonMap.two)) {
+        data.two = true;
+        return data;
+    }
+    if (isButtonAtCoordinates(data, global.buttonMap.three)) {
+        data.three = true;
+        return data;
+    }
+    if (isButtonAtCoordinates(data, global.buttonMap.plus)) {
+        data.plus = true;
+        return data;
+    }
+    // row 5
+    if (isButtonAtCoordinates(data, global.buttonMap.negate)) {
+        data.negate = true;
+        return data;
+    }
+    if (isButtonAtCoordinates(data, global.buttonMap.zero)) {
+        data.zero = true;
+        return data;
+    }
+    if (isButtonAtCoordinates(data, global.buttonMap.decimal)) {
+        data.decimal = true;
+        return data;
+    }
+    if (isButtonAtCoordinates(data, global.buttonMap.equals)) {
+        data.equals = true;
+        return data;
+    }
+};
+
+function isButtonAtCoordinates(data: PayloadInput, button: ButtonState): boolean {
+    return data.x >= button.x && data.x <= button.x + button.width && data.y >= button.y && data.y <= button.y + button.height;
+};

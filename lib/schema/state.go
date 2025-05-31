@@ -17,7 +17,7 @@ type Member struct {
 }
 
 type MemberState struct {
-	Member
+	Member Member
 	// row 1
 	Clear      bool
 	Bracket    bool

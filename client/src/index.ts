@@ -1,5 +1,5 @@
 import { listenForUserInput } from './userinput/listener';
-import { game } from './game/game';
+import Game from './game/game';
 import * as enums from './types/enums';
 import type * as types from './types/types';
 
@@ -11,7 +11,7 @@ const canvas: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById('ma
 const ctx: CanvasRenderingContext2D = canvas.getContext("2d");
 
 // Create a SharedArrayBuffer
-const sharedBuffer = new SharedArrayBuffer(1024); // 1KB buffer
+const sharedBuffer = new SharedArrayBuffer(4096); // 4KB buffer
 
 async function main(ev: Event) {
     // Check if canvas is supported
@@ -53,7 +53,7 @@ async function main(ev: Event) {
     };
     logic.postMessage(intial);
     // Start render loop
-    game(ctx, canvas, sharedBuffer);
+    Game(ctx, canvas, sharedBuffer);
 }
 
 addEventListener("load", main);

@@ -2,30 +2,32 @@ package game
 
 import (
 	"calculator/logger"
+	"sync"
 	"time"
 
 	"github.com/expki/calculator/lib/encoding"
 	"github.com/expki/calculator/lib/schema"
 
-	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 )
 
 type Session struct {
-	Id    uuid.UUID
-	state *schema.Global
-	done  chan error
-	conn  *websocket.Conn
-	send  chan []byte
+	Id        int
+	stateLock *sync.RWMutex
+	state     *schema.StateState
+	done      chan error
+	conn      *websocket.Conn
+	send      chan []byte
 }
 
-func NewSession(id uuid.UUID, conn *websocket.Conn, state *schema.Global) *Session {
+func NewSession(id int, conn *websocket.Conn, state *schema.StateState, stateLock *sync.RWMutex) *Session {
 	s := &Session{
-		Id:    id,
-		done:  make(chan error, 1),
-		conn:  conn,
-		state: state,
-		send:  make(chan []byte, 1),
+		Id:        id,
+		done:      make(chan error, 1),
+		conn:      conn,
+		stateLock: stateLock,
+		state:     state,
+		send:      make(chan []byte, 1),
 	}
 	go s.handlePing()
 	go s.handleInput()
@@ -48,7 +50,7 @@ func (s *Session) handlePing() {
 		case <-ticker.C:
 			// Send a ping message
 			if err := s.conn.WriteMessage(websocket.PingMessage, nil); err != nil {
-				logger.Sugar().Errorf("Ping error %s: %v", s.Id.String(), err)
+				logger.Sugar().Errorf("Ping error %d: %v", s.Id, err)
 				close(s.done)
 				s.conn.Close()
 			}
@@ -70,7 +72,7 @@ func (s *Session) handleInput() {
 		// Handle message
 		func() {
 			if mt == websocket.PongMessage {
-				logger.Sugar().Debugf("Pong message: %s", s.Id.String())
+				logger.Sugar().Debugf("Pong message: %d", s.Id)
 				return // Ignore pong messages
 			}
 			if mt != websocket.BinaryMessage {
@@ -89,13 +91,9 @@ func (s *Session) handleInput() {
 				logger.Sugar().Errorf("Decode client message")
 				return
 			}
-			me := s.state.GetMember(s.Id.String())
-			if me == nil {
-				logger.Sugar().Errorf("Member not found: %s", s.Id.String())
-				return
-			}
-			me.SetX(userIn.X)
-			me.SetY(userIn.Y)
+			s.stateLock.Lock()
+			s.handleUserInput(userIn)
+			s.stateLock.Unlock()
 		}()
 	}
 }

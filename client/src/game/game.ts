@@ -1,14 +1,20 @@
 import lib from '@lib/index';
-import { renderCalculator } from './calculator';
-import { renderCursor } from './cursor';
-import type * as state from '../types/state';
+import RenderCalculator from './calculator';
+import RenderPreformance from './pref';
+import RenderCursor from './cursor';
+import type { LocalState } from '../types/state';
+import type { ButtonMap } from '../types/types';
 
-const target_tick_rate = 1000 / 60
+declare global {
+    var buttonMap: ButtonMap | undefined;
+}
+
+const target_tick_rate = 1000 / 60;
 let ctx: CanvasRenderingContext2D;
 let canvas: HTMLCanvasElement;
 let sharedBuffer: SharedArrayBuffer;
 
-export function game(inCtx: CanvasRenderingContext2D, inCanvas: HTMLCanvasElement, inSharedBuffer: SharedArrayBuffer) {
+export default function Game(inCtx: CanvasRenderingContext2D, inCanvas: HTMLCanvasElement, inSharedBuffer: SharedArrayBuffer) {
     ctx = inCtx;
     canvas = inCanvas;
     sharedBuffer = inSharedBuffer;
@@ -16,47 +22,49 @@ export function game(inCtx: CanvasRenderingContext2D, inCanvas: HTMLCanvasElemen
 }
 
 let n = 0;
-const pref = new Array<number>(60).fill(0);
+let lastFrameTime = performance.now();
+const fps = new Array<number>(60).fill(0);
+const gpuLoad = new Array<number>(60).fill(0);
+const cpuLoad = new Array<number>(60).fill(0);
 
-async function renderLoop(): Promise<void> {
+function renderLoop(): void {
     try {
         n++;
         const start = performance.now();
+        const delta = start - lastFrameTime;
+        lastFrameTime = start;
+
+        // Calculate fps
+        fps[n % 60] = 1000 / delta;
+
         // Load game state
         const sharedBytes = new Uint8Array(sharedBuffer);
         const bytes = new Uint8Array(sharedBytes.length);
         bytes.set(sharedBytes);
-        const [state, _ ]: [state.StateExt, number] = lib.encoding.Decode<state.State>(bytes);
-        state.CpuRender = pref.reduce((a, b) => a + b, 0) / 60;
-        const xCenter = canvas.width / 2;
-        const yCenter = canvas.height / 2
-
-        // Clear canvas
-        ctx.reset();
-        ctx.fillStyle = "black";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Draw FPS in top left corner
-        ctx.fillStyle = "lightgreen";
-        ctx.font = "20px Verdana";
-        ctx.fillText(`${state.CpuLogic >= 0.1 ? "" : " "}${(100 * state.CpuRender).toFixed(2)}%`, 10, 25);
-        ctx.fillStyle = "lightblue";
-        ctx.fillText(`${state.CpuLogic >= 0.1 ? "" : " "}${(100 * state.CpuLogic).toFixed(2)}%`, 10, 50);
+        const [state, _ ] = lib.encoding.Decode<LocalState>(bytes);
 
         // Draw calculator
-        renderCalculator(ctx, canvas, state.Global.Calculator, xCenter, yCenter);
+        RenderCalculator(ctx, canvas, state.State);
+
+        // Draw FPS in top left corner
+        const stableFps = fps.reduce((a, b) => a + b, 0) / 60;
+        const stableGpuLoad = gpuLoad.reduce((a, b) => a + b, 0) / 60;
+        const stableCpuLoad = cpuLoad.reduce((a, b) => a + b, 0) / 60;
+        RenderPreformance(ctx, stableFps, stableGpuLoad, stableCpuLoad);
 
         // Draw cursor
-        Object.values(state.Global.Members ?? {}).forEach((member) => renderCursor(ctx, canvas, member));
+        console.log(`player: ${state.State.Members?.length}`);
+        (state.State.Members ?? []).forEach((member) => RenderCursor(ctx, canvas, member));
 
         // Calculate render time
         const end = performance.now() - start;
-        pref[n%60] = end / target_tick_rate;
+        gpuLoad[n%60] = end / target_tick_rate;
+        cpuLoad[n%60] = state.CpuLoad ?? 1;
 
         if (n % 120 === 0) {
             console.log(state);
         }
-    } catch(e) {
+    } catch(e: unknown) {
         console.error(e);
     } finally {
         // Request next frame

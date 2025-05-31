@@ -4,7 +4,7 @@ import (
 	"calculator/logger"
 	"net/http"
 
-	"github.com/google/uuid"
+	"github.com/expki/calculator/lib/schema"
 	"github.com/gorilla/websocket"
 )
 
@@ -30,15 +30,20 @@ func (g *Game) UpgradeHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	// Create a new session
-	id := uuid.New()
-
-	session := NewSession(id, conn, &g.state)
-
 	// Add member to state
 	g.stateLock.Lock()
-	g.state.AddMember(id.String(), 0, 0)
+	var id int = 0
+	for _, member := range g.state.Members {
+		if id <= member.Member.Id {
+			id = 1 + member.Member.Id
+		}
+	}
+	g.state.Members = append(g.state.Members, schema.MemberState{Member: schema.Member{Id: id}})
 	g.stateLock.Unlock()
+
+	// Create session
+	session := NewSession(id, conn, &g.state, &g.stateLock)
+
 	// Add session to client map
 	g.clientLock.Lock()
 	g.clientMap[id] = session
@@ -52,8 +57,14 @@ func (g *Game) UpgradeHandlerFunc(w http.ResponseWriter, r *http.Request) {
 
 	// Remove member from state
 	g.stateLock.Lock()
-	g.state.RemoveMember(id.String())
+	filteredMembers := make([]schema.MemberState, 0, len(g.state.Members)-1)
+	for _, member := range g.state.Members {
+		if member.Member.Id != id {
+			filteredMembers = append(filteredMembers, member)
+		}
+	}
 	g.stateLock.Unlock()
+
 	// Remove session from client map
 	g.clientLock.Lock()
 	delete(g.clientMap, id)
