@@ -1,6 +1,8 @@
 package logic
 
 import (
+	"calculator/src/types"
+
 	"github.com/expki/calculator/lib/schema"
 )
 
@@ -71,4 +73,33 @@ func (local *LocalInput) Translate() (value schema.Input) {
 	value.Decimal = local.decimal
 	value.Equals = local.equals
 	return value
+}
+
+func (local *LocalInput) Meged(state types.LocalState) types.LocalState {
+	// row 1
+	state.Calculator.Clear = state.Calculator.Clear || local.clear
+	state.Calculator.Bracket = state.Calculator.Bracket || local.bracket
+	state.Calculator.Percentage = state.Calculator.Percentage || local.percentage
+	state.Calculator.Divide = state.Calculator.Divide || local.divide
+	// row 2
+	state.Calculator.Seven = state.Calculator.Seven || local.seven
+	state.Calculator.Eight = state.Calculator.Eight || local.eight
+	state.Calculator.Nine = state.Calculator.Nine || local.nine
+	state.Calculator.Times = state.Calculator.Times || local.times
+	// row 3
+	state.Calculator.Four = state.Calculator.Four || local.four
+	state.Calculator.Five = state.Calculator.Five || local.five
+	state.Calculator.Six = state.Calculator.Six || local.six
+	state.Calculator.Minus = state.Calculator.Minus || local.minus
+	// row 4
+	state.Calculator.One = state.Calculator.One || local.one
+	state.Calculator.Two = state.Calculator.Two || local.two
+	state.Calculator.Three = state.Calculator.Three || local.three
+	state.Calculator.Plus = state.Calculator.Plus || local.plus
+	// row 5
+	state.Calculator.Negate = state.Calculator.Negate || local.negate
+	state.Calculator.Zero = state.Calculator.Zero || local.zero
+	state.Calculator.Decimal = state.Calculator.Decimal || local.decimal
+	state.Calculator.Equals = state.Calculator.Equals || local.equals
+	return state
 }

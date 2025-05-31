@@ -26,6 +26,7 @@ let lastFrameTime = performance.now();
 const fps = new Array<number>(60).fill(0);
 const gpuLoad = new Array<number>(60).fill(0);
 const cpuLoad = new Array<number>(60).fill(0);
+let prevBytes = new Uint8Array();
 
 function renderLoop(): void {
     try {
@@ -53,7 +54,6 @@ function renderLoop(): void {
         RenderPreformance(ctx, stableFps, stableGpuLoad, stableCpuLoad);
 
         // Draw cursor
-        console.log(`player: ${state.State.Members?.length}`);
         (state.State.Members ?? []).forEach((member) => RenderCursor(ctx, canvas, member));
 
         // Calculate render time
@@ -61,8 +61,11 @@ function renderLoop(): void {
         gpuLoad[n%60] = end / target_tick_rate;
         cpuLoad[n%60] = state.CpuLoad ?? 1;
 
-        if (n % 120 === 0) {
-            console.log(state);
+        // Log state
+        if (!bytesEqual(bytes, prevBytes)) {
+            prevBytes = new Uint8Array(bytes.length);
+            prevBytes.set(bytes);
+            console.debug(state);
         }
     } catch(e: unknown) {
         console.error(e);
@@ -70,4 +73,13 @@ function renderLoop(): void {
         // Request next frame
         requestAnimationFrame(renderLoop);
     }
+}
+
+function bytesEqual(a: Uint8Array, b: Uint8Array): boolean {
+    if (a.length !== b.length) return false;
+    let result = 0;
+    for (let i = 0; i < a.length; i++) {
+        result |= a[i] ^ b[i];
+    }
+    return result === 0;
 }

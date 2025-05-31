@@ -46,10 +46,9 @@ func (s *Session) handleUserInput(userIn schema.Input) {
 		if member.Member.Id != s.Id {
 			continue
 		}
-
+		s.handlePress(userIn)
 		s.state.Members[idx].Member.X = userIn.X
 		s.state.Members[idx].Member.Y = userIn.Y
-
 		s.handleClear(&s.state.Members[idx], userIn)
 		s.handleBracket(&s.state.Members[idx], userIn)
 		s.handlePercentage(&s.state.Members[idx], userIn)
@@ -58,9 +57,36 @@ func (s *Session) handleUserInput(userIn schema.Input) {
 		s.handleNegate(&s.state.Members[idx], userIn)
 		s.handleDecimal(&s.state.Members[idx], userIn)
 		s.handleEquals(&s.state.Members[idx], userIn)
-
 		break
 	}
+}
+
+func (s *Session) handlePress(userIn schema.Input) {
+	// row 1
+	s.state.Calculator.Clear = userIn.Clear
+	s.state.Calculator.Bracket = userIn.Bracket
+	s.state.Calculator.Percentage = userIn.Percentage
+	s.state.Calculator.Divide = userIn.Divide
+	// row 2
+	s.state.Calculator.Seven = userIn.Seven
+	s.state.Calculator.Eight = userIn.Eight
+	s.state.Calculator.Nine = userIn.Nine
+	s.state.Calculator.Times = userIn.Times
+	// row 3
+	s.state.Calculator.Four = userIn.Four
+	s.state.Calculator.Five = userIn.Five
+	s.state.Calculator.Six = userIn.Six
+	s.state.Calculator.Minus = userIn.Minus
+	// row 4
+	s.state.Calculator.One = userIn.One
+	s.state.Calculator.Two = userIn.Two
+	s.state.Calculator.Three = userIn.Three
+	s.state.Calculator.Plus = userIn.Plus
+	// row 5
+	s.state.Calculator.Negate = userIn.Negate
+	s.state.Calculator.Zero = userIn.Zero
+	s.state.Calculator.Decimal = userIn.Decimal
+	s.state.Calculator.Equals = userIn.Equals
 }
 
 func (s *Session) handleClear(member *schema.MemberState, userIn schema.Input) {

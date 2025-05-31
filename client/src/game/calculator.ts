@@ -33,30 +33,30 @@ export default function RenderCalculator(ctx: CanvasRenderingContext2D, canvas: 
     const buttonHeight = (height - displayHeight) / 5; // 5 rows
     global.buttonMap = {
         // row 1
-        clear: newButtonState(newButtonLayout(buttonPropertiesClear, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleLight, Boolean(state.Calculator?.clear)),
-        bracket: newButtonState(newButtonLayout(buttonPropertiesBracket, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleLight, Boolean(state.Calculator?.bracket)),
-        percentage: newButtonState(newButtonLayout(buttonPropertiesPercentage, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleLight, Boolean(state.Calculator?.percentage)),
-        divide: newButtonState(newButtonLayout(buttonPropertiesDivide, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleLight, Boolean(state.Calculator?.divide)),
+        clear: newButtonState(newButtonLayout(buttonPropertiesClear, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleLight, Boolean(state.Calculator?.Clear)),
+        bracket: newButtonState(newButtonLayout(buttonPropertiesBracket, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleLight, Boolean(state.Calculator?.Bracket)),
+        percentage: newButtonState(newButtonLayout(buttonPropertiesPercentage, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleLight, Boolean(state.Calculator?.Percentage)),
+        divide: newButtonState(newButtonLayout(buttonPropertiesDivide, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleLight, Boolean(state.Calculator?.Divide)),
         // row 2
-        seven: newButtonState(newButtonLayout(buttonPropertiesSeven, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.seven)),
-        eight:  newButtonState(newButtonLayout(buttonPropertiesEight, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.eight)),
-        nine: newButtonState(newButtonLayout(buttonPropertiesNine, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.nine)),
-        times: newButtonState(newButtonLayout(buttonPropertiesTimes, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleLight, Boolean(state.Calculator?.times)),
+        seven: newButtonState(newButtonLayout(buttonPropertiesSeven, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.Seven)),
+        eight:  newButtonState(newButtonLayout(buttonPropertiesEight, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.Eight)),
+        nine: newButtonState(newButtonLayout(buttonPropertiesNine, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.Nine)),
+        times: newButtonState(newButtonLayout(buttonPropertiesTimes, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleLight, Boolean(state.Calculator?.Times)),
         // row 3
-        four: newButtonState(newButtonLayout(buttonPropertiesFour, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.four)),
-        five: newButtonState(newButtonLayout(buttonPropertiesFive, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.five)),
-        six: newButtonState(newButtonLayout(buttonPropertiesSix, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.six)),
-        minus: newButtonState(newButtonLayout(buttonPropertiesMinus, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleLight, Boolean(state.Calculator?.minus)),
+        four: newButtonState(newButtonLayout(buttonPropertiesFour, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.Four)),
+        five: newButtonState(newButtonLayout(buttonPropertiesFive, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.Five)),
+        six: newButtonState(newButtonLayout(buttonPropertiesSix, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.Six)),
+        minus: newButtonState(newButtonLayout(buttonPropertiesMinus, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleLight, Boolean(state.Calculator?.Minus)),
         // row 4
-        one: newButtonState(newButtonLayout(buttonPropertiesOne, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.one)),
-        two: newButtonState(newButtonLayout(buttonPropertiesTwo, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.two)),
-        three: newButtonState(newButtonLayout(buttonPropertiesThree, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.three)),
-        plus: newButtonState(newButtonLayout(buttonPropertiesPlus, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleLight, Boolean(state.Calculator?.plus)),
+        one: newButtonState(newButtonLayout(buttonPropertiesOne, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.One)),
+        two: newButtonState(newButtonLayout(buttonPropertiesTwo, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.Two)),
+        three: newButtonState(newButtonLayout(buttonPropertiesThree, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.Three)),
+        plus: newButtonState(newButtonLayout(buttonPropertiesPlus, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleLight, Boolean(state.Calculator?.Plus)),
         // row 5
-        negate: newButtonState(newButtonLayout(buttonPropertiesNegate, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.negate)),
-        zero: newButtonState(newButtonLayout(buttonPropertiesZero, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.zero)),
-        decimal: newButtonState(newButtonLayout(buttonPropertiesDecimal, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.decimal)),
-        equals: newButtonState(newButtonLayout(buttonPropertiesEquals, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleRed, Boolean(state.Calculator?.equals)),
+        negate: newButtonState(newButtonLayout(buttonPropertiesNegate, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.Negate)),
+        zero: newButtonState(newButtonLayout(buttonPropertiesZero, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.Zero)),
+        decimal: newButtonState(newButtonLayout(buttonPropertiesDecimal, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleDark, Boolean(state.Calculator?.Decimal)),
+        equals: newButtonState(newButtonLayout(buttonPropertiesEquals, displayHeight, offsetX, offsetY, buttonWidth, buttonHeight), buttonStyleRed, Boolean(state.Calculator?.Equals)),
     };
     const buttonList = Object.values(global.buttonMap);
 

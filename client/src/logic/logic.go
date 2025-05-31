@@ -5,6 +5,7 @@ import (
 	"calculator/src/types"
 	"context"
 	"log"
+	"sync"
 	"syscall/js"
 	"time"
 
@@ -68,99 +69,104 @@ func New(ctx context.Context, cancel context.CancelFunc, port string, sharedArra
 		lastMsg = msg
 	}
 
-	userInput := LocalInput{}
+	localInputLock := &sync.Mutex{}
+	localInput := &LocalInput{}
 	window.Set("handleInput", js.FuncOf(func(this js.Value, args []js.Value) any {
-		if len(args) < 1 {
+		if len(args) < 1 || args[0].IsUndefined() {
 			return nil
 		}
 		arg := args[0]
+		local := LocalInput{}
 		if value := arg.Get("mouseleft"); !value.IsUndefined() {
-			userInput.mouseleft = value.Bool()
+			local.mouseleft = value.Bool()
 		}
 		if value := arg.Get("mousex"); !value.IsUndefined() {
-			userInput.mousex = value.Int()
+			local.mousex = value.Int()
 		}
 		if value := arg.Get("mousey"); !value.IsUndefined() {
-			userInput.mousey = value.Int()
+			local.mousey = value.Int()
 		}
 		if value := arg.Get("width"); !value.IsUndefined() {
-			userInput.width = value.Int()
+			local.width = value.Int()
 		}
 		if value := arg.Get("height"); !value.IsUndefined() {
-			userInput.height = value.Int()
+			local.height = value.Int()
 		}
 		if value := arg.Get("x"); !value.IsUndefined() {
-			userInput.x = value.Int()
+			local.x = value.Int()
 		}
 		if value := arg.Get("y"); !value.IsUndefined() {
-			userInput.y = value.Int()
+			local.y = value.Int()
 		}
 		// row 1
 		if value := arg.Get("clear"); !value.IsUndefined() {
-			userInput.clear = value.Bool()
+			local.clear = value.Bool()
 		}
 		if value := arg.Get("bracket"); !value.IsUndefined() {
-			userInput.bracket = value.Bool()
+			local.bracket = value.Bool()
 		}
 		if value := arg.Get("percentage"); !value.IsUndefined() {
-			userInput.percentage = value.Bool()
+			local.percentage = value.Bool()
 		}
 		if value := arg.Get("divide"); !value.IsUndefined() {
-			userInput.divide = value.Bool()
+			local.divide = value.Bool()
 		}
 		// row 2
 		if value := arg.Get("seven"); !value.IsUndefined() {
-			userInput.seven = value.Bool()
+			local.seven = value.Bool()
 		}
 		if value := arg.Get("eight"); !value.IsUndefined() {
-			userInput.eight = value.Bool()
+			local.eight = value.Bool()
 		}
 		if value := arg.Get("nine"); !value.IsUndefined() {
-			userInput.nine = value.Bool()
+			local.nine = value.Bool()
 		}
 		if value := arg.Get("times"); !value.IsUndefined() {
-			userInput.times = value.Bool()
+			local.times = value.Bool()
 		}
 		// row 3
 		if value := arg.Get("four"); !value.IsUndefined() {
-			userInput.four = value.Bool()
+			local.four = value.Bool()
 		}
 		if value := arg.Get("five"); !value.IsUndefined() {
-			userInput.five = value.Bool()
+			local.five = value.Bool()
 		}
 		if value := arg.Get("six"); !value.IsUndefined() {
-			userInput.six = value.Bool()
+			local.six = value.Bool()
 		}
 		if value := arg.Get("minus"); !value.IsUndefined() {
-			userInput.minus = value.Bool()
+			local.minus = value.Bool()
 		}
 		// row 4
 		if value := arg.Get("one"); !value.IsUndefined() {
-			userInput.one = value.Bool()
+			local.one = value.Bool()
 		}
 		if value := arg.Get("two"); !value.IsUndefined() {
-			userInput.two = value.Bool()
+			local.two = value.Bool()
 		}
 		if value := arg.Get("three"); !value.IsUndefined() {
-			userInput.three = value.Bool()
+			local.three = value.Bool()
 		}
 		if value := arg.Get("plus"); !value.IsUndefined() {
-			userInput.plus = value.Bool()
+			local.plus = value.Bool()
 		}
 		// row 5
 		if value := arg.Get("negate"); !value.IsUndefined() {
-			userInput.negate = value.Bool()
+			local.negate = value.Bool()
 		}
 		if value := arg.Get("zero"); !value.IsUndefined() {
-			userInput.zero = value.Bool()
+			local.zero = value.Bool()
 		}
 		if value := arg.Get("decimal"); !value.IsUndefined() {
-			userInput.decimal = value.Bool()
+			local.decimal = value.Bool()
 		}
 		if value := arg.Get("equals"); !value.IsUndefined() {
-			userInput.equals = value.Bool()
+			local.equals = value.Bool()
 		}
-		notify(userInput.Translate())
+		localInputLock.Lock()
+		localInput = &local
+		localInputLock.Unlock()
+		notify(local.Translate())
 		return nil
 	}))
 
@@ -203,6 +209,9 @@ func New(ctx context.Context, cancel context.CancelFunc, port string, sharedArra
 					Id:      0,
 					CpuLoad: pref,
 				}
+				localInputLock.Lock()
+				state = localInput.Meged(state)
+				localInputLock.Unlock()
 				stateData := encoding.Encode(state)
 				if !bytes.Equal(lastStateData, stateData) {
 					js.CopyBytesToJS(sharedArray, stateData)
