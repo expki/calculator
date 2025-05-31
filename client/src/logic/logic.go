@@ -197,7 +197,7 @@ func New(ctx context.Context, cancel context.CancelFunc, port string, sharedArra
 					cancel()
 					return
 				}
-				var global schema.State
+				var global schema.PersonalizedState
 				err = encoding.Engrain(data.(map[string]any), &global)
 				if err != nil {
 					log.Printf("error message engrain: %v", t)
@@ -205,8 +205,8 @@ func New(ctx context.Context, cancel context.CancelFunc, port string, sharedArra
 					return
 				}
 				state := types.LocalState{
-					State:   global,
-					Id:      0,
+					State:   global.State,
+					Id:      global.Id,
 					CpuLoad: pref,
 				}
 				localInputLock.Lock()

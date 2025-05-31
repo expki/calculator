@@ -1,7 +1,7 @@
 import { listenForUserInput } from './userinput/listener';
 import Game from './game/game';
-import * as enums from './types/enums';
-import type * as types from './types/types';
+import { PayloadKind } from './types/enums';
+import type { Payload, PayloadWasm, PayloadInput } from './types/types';
 
 if (!crossOriginIsolated) {
     console.error("sharredArrayBuffer is not available");
@@ -13,7 +13,7 @@ const ctx: CanvasRenderingContext2D = canvas.getContext("2d");
 // Create a SharedArrayBuffer
 const sharedBuffer = new SharedArrayBuffer(4096); // 4KB buffer
 
-async function main(ev: Event) {
+async function main(_: Event) {
     // Check if canvas is supported
     if (!ctx) {
         console.error("Canvas not supported");
@@ -33,8 +33,8 @@ async function main(ev: Event) {
     // Start game logic
     const logic = new Worker(new URL("./logic/logic.ts", import.meta.url), { type: "module" });
     const bytes = await fetch('logic.wasm').then(response => response.arrayBuffer());
-    const payload: types.Payload<types.PayloadWasm> = {
-        kind: enums.PayloadKind.wasm,
+    const payload: Payload<PayloadWasm> = {
+        kind: PayloadKind.wasm,
         payload: {
             wasm: bytes,
             pipe: sharedBuffer,
@@ -44,8 +44,8 @@ async function main(ev: Event) {
     // Listen for user input
     listenForUserInput(canvas, logic);
     // Set initial window size values
-    const intial: types.Payload<types.PayloadInput> = {
-        kind: enums.PayloadKind.input,
+    const intial: Payload<PayloadInput> = {
+        kind: PayloadKind.input,
         payload: {
             width: window.innerWidth,
             height: window.innerHeight,

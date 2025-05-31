@@ -1,5 +1,10 @@
 package schema
 
+type PersonalizedState struct {
+	Id    int
+	State State
+}
+
 type State struct {
 	Calculator Calculator
 	Members    []Member
@@ -80,6 +85,19 @@ func (s *StateState) State() State {
 	members := make([]Member, len(s.Members))
 	for idx, member := range s.Members {
 		members[idx] = member.Member
+	}
+	return State{
+		Calculator: s.Calculator,
+		Members:    members,
+	}
+}
+
+func (s *State) WithoutMember(id int) State {
+	members := make([]Member, 0, len(s.Members)-1)
+	for _, member := range s.Members {
+		if member.Id != id {
+			members = append(members, member)
+		}
 	}
 	return State{
 		Calculator: s.Calculator,

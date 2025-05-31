@@ -32,7 +32,7 @@ func (g *Game) UpgradeHandlerFunc(w http.ResponseWriter, r *http.Request) {
 
 	// Add member to state
 	g.stateLock.Lock()
-	var id int = 0
+	var id int = 1
 	for _, member := range g.state.Members {
 		if id <= member.Member.Id {
 			id = 1 + member.Member.Id

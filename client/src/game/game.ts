@@ -53,8 +53,15 @@ function renderLoop(): void {
         const stableCpuLoad = cpuLoad.reduce((a, b) => a + b, 0) / 60;
         RenderPreformance(ctx, stableFps, stableGpuLoad, stableCpuLoad);
 
-        // Draw cursor
+        // Draw player cursors
         (state.State.Members ?? []).forEach((member) => RenderCursor(ctx, canvas, member));
+
+        // Draw own cursor
+        RenderCursor(ctx, canvas, {
+            Id: state.Id,
+            X: state.X,
+            Y: state.Y,
+        }, false);
 
         // Calculate render time
         const end = performance.now() - start;

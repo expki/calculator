@@ -76,6 +76,8 @@ func (local *LocalInput) Translate() (value schema.Input) {
 }
 
 func (local *LocalInput) Meged(state types.LocalState) types.LocalState {
+	state.X = local.x
+	state.Y = local.y
 	// row 1
 	state.Calculator.Clear = state.Calculator.Clear || local.clear
 	state.Calculator.Bracket = state.Calculator.Bracket || local.bracket
