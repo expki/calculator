@@ -20,24 +20,37 @@ type Logic struct {
 	conn *websocket.Conn
 }
 
-func New(port string, sharedArray js.Value) *Logic {
+func New(ctx context.Context, cancel context.CancelFunc, port string, sharedArray js.Value) (logic *Logic) {
+	window := js.Global()
+
+	// Instantiate the logic module
+	logic = &Logic{}
+	var err error
+
+	window.Set("onbeforeunload", js.FuncOf(func(this js.Value, args []js.Value) any {
+		logic.Close()
+		cancel()
+		return nil
+	}))
+
 	// Set initial state
 	js.CopyBytesToJS(sharedArray, encoding.Encode(types.LocalState{}))
 
 	// Get server websocket url
-	uri, err := getWebsocketURL(port)
+	logic.url, err = getWebsocketURL(port)
 	if err != nil {
-		log.Fatalf("websocketURL: %v", err)
-	}
-
-	// Instantiate the logic module
-	logic := &Logic{
-		url:  uri,
-		conn: nil,
+		log.Printf("error websocketURL: %v", err)
+		cancel()
+		return
 	}
 
 	// Connect to the server
-	logic.connect()
+	err = logic.connect(ctx)
+	if err != nil {
+		log.Printf("error connect: %v", err)
+		cancel()
+		return
+	}
 
 	// Client (self) → Server
 	var lastMsg []byte
@@ -46,16 +59,15 @@ func New(port string, sharedArray js.Value) *Logic {
 		if bytes.Equal(lastMsg, msg) {
 			return
 		}
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
 		err = logic.conn.Write(ctx, websocket.MessageBinary, msg)
 		if err != nil {
-			log.Fatalf("websocket.Message.Send exception: %v", err)
+			log.Printf("error send: %v", err)
+			cancel()
 			return
 		}
 		lastMsg = msg
 	}
-	window := js.Global()
+
 	userInput := LocalInput{}
 	window.Set("handleInput", js.FuncOf(func(this js.Value, args []js.Value) any {
 		if len(args) < 1 {
@@ -158,27 +170,32 @@ func New(port string, sharedArray js.Value) *Logic {
 		var pref float32
 		for {
 			func() {
-				t, msg, err := logic.conn.Read(context.Background())
+				t, msg, err := logic.conn.Read(ctx)
 				if err != nil {
-					log.Fatalf("websocket.Message.Read exception: %v", err)
+					log.Printf("error read: %v", err)
+					cancel()
 					return
 				}
 				switch t {
 				case websocket.MessageBinary:
 					// continue
 				default:
-					log.Fatalf("unexpected message type: %v", t)
+					log.Printf("error unrecognised message type: %v", t)
+					cancel()
+					return
 				}
 				prefStart := time.Now()
 				data, err := encoding.DecodeWithCompression(msg)
 				if err != nil {
-					log.Fatalf("websocket.Message.Compress exception: %v", err)
+					log.Printf("error message decode: %v", t)
+					cancel()
 					return
 				}
 				var global schema.State
 				err = encoding.Engrain(data.(map[string]any), &global)
 				if err != nil {
-					log.Fatalf("encoding.Engrain exception: %v", err)
+					log.Printf("error message engrain: %v", t)
+					cancel()
 					return
 				}
 				state := types.LocalState{
@@ -201,5 +218,9 @@ func New(port string, sharedArray js.Value) *Logic {
 }
 
 func (l *Logic) Close() {
+	if l.conn == nil {
+		return
+	}
 	l.conn.Close(websocket.StatusGoingAway, "normal closure")
+	l.conn = nil
 }

@@ -11,6 +11,11 @@ import (
 
 const game_tick_rate = time.Second / 60
 
+var (
+	lastClientCount int
+	lastState       string
+)
+
 func (g *Game) gameLoop() {
 	var lastEncodedState []byte
 	var lastClients = make(map[int]struct{})
@@ -27,8 +32,11 @@ func (g *Game) gameLoop() {
 		g.stateLock.RLock()
 		clientCount := len(g.state.Members)
 		g.stateLock.RUnlock()
+		if clientCount != lastClientCount {
+			logger.Sugar().Debugf("Number of clients: %d", lastClientCount)
+			lastClientCount = clientCount
+		}
 		if clientCount == 0 {
-			logger.Logger().Debug("no clients...")
 			continue
 		}
 
@@ -38,7 +46,10 @@ func (g *Game) gameLoop() {
 		g.stateLock.RUnlock()
 
 		ssss, _ := json.Marshal(g.state.State())
-		logger.Logger().Debug(string(ssss))
+		if lastState != string(ssss) {
+			logger.Logger().Debug(string(ssss))
+			lastState = string(ssss)
+		}
 
 		// Send game state to all clients
 		g.clientLock.RLock()

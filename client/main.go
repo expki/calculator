@@ -2,6 +2,7 @@ package main
 
 import (
 	"calculator/src/logic"
+	"context"
 	"syscall/js"
 
 	"github.com/coder/websocket"
@@ -14,12 +15,16 @@ type Websocket struct {
 }
 
 func main() {
+	ctx, cancel := context.WithCancel(context.Background())
+
 	// Get sharedArray
 	sharedArray := js.Global().Get("sharedArray")
 
 	// Run game tick
-	l := logic.New(port, sharedArray)
-	defer l.Close()
+	l := logic.New(ctx, cancel, port, sharedArray)
+
 	// Wait forever
-	select {}
+	<-ctx.Done()
+	l.Close()
+	cancel()
 }

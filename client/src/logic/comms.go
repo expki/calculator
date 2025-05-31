@@ -3,7 +3,6 @@ package logic
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/url"
 	"strconv"
 	"syscall/js"
@@ -11,12 +10,9 @@ import (
 	"github.com/coder/websocket"
 )
 
-func (c *Logic) connect() {
-	var err error
-	c.conn, _, err = websocket.Dial(context.Background(), c.url, nil)
-	if err != nil {
-		log.Fatalf("websocket.Dial exception: %v", err)
-	}
+func (c *Logic) connect(ctx context.Context) (err error) {
+	c.conn, _, err = websocket.Dial(ctx, c.url, nil)
+	return err
 }
 
 func getWebsocketURL(port string) (string, error) {

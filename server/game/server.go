@@ -42,6 +42,7 @@ func (g *Game) UpgradeHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	g.stateLock.Unlock()
 
 	// Create session
+	logger.Sugar().Infof("client connected: %d", id)
 	session := NewSession(id, conn, &g.state, &g.stateLock)
 
 	// Add session to client map
@@ -54,6 +55,7 @@ func (g *Game) UpgradeHandlerFunc(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		logger.Sugar().Errorf("Session closed with error: %v", err)
 	}
+	logger.Sugar().Infof("client disconnected: %d", id)
 
 	// Remove member from state
 	g.stateLock.Lock()
@@ -63,6 +65,7 @@ func (g *Game) UpgradeHandlerFunc(w http.ResponseWriter, r *http.Request) {
 			filteredMembers = append(filteredMembers, member)
 		}
 	}
+	g.state.Members = filteredMembers
 	g.stateLock.Unlock()
 
 	// Remove session from client map
