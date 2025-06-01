@@ -2,15 +2,26 @@ package logic
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
 	"syscall/js"
+	"time"
 
 	"github.com/coder/websocket"
 )
 
 func (c *Logic) connect(ctx context.Context) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = errors.New("Tried to connect using closed http listener")
+			fmt.Printf("Recovered. %s: %v\n", err.Error(), r)
+		}
+		if err != nil {
+			time.Sleep(500)
+		}
+	}()
 	c.conn, _, err = websocket.Dial(ctx, c.url, nil)
 	return err
 }

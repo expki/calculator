@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"calculator/src/types"
 	"context"
+	"errors"
+	"fmt"
 	"log"
 	"sync"
 	"syscall/js"
@@ -28,12 +30,6 @@ func New(ctx context.Context, cancel context.CancelFunc, port string, sharedArra
 	logic = &Logic{}
 	var err error
 
-	window.Set("onbeforeunload", js.FuncOf(func(this js.Value, args []js.Value) any {
-		logic.Close()
-		cancel()
-		return nil
-	}))
-
 	// Set initial state
 	js.CopyBytesToJS(sharedArray, encoding.Encode(types.LocalState{}))
 
@@ -56,11 +52,18 @@ func New(ctx context.Context, cancel context.CancelFunc, port string, sharedArra
 	// Client (self) → Server
 	var lastMsg []byte
 	notify := func(input schema.Input) {
+		defer func() {
+			if r := recover(); r != nil {
+				err := errors.New("Tried to write closed connection")
+				fmt.Printf("Recovered. %s: %v\n", err.Error(), r)
+				cancel()
+			}
+		}()
 		msg := encoding.EncodeWithCompression(input)
 		if bytes.Equal(lastMsg, msg) {
 			return
 		}
-		err = logic.conn.Write(ctx, websocket.MessageBinary, msg)
+		err := logic.conn.Write(ctx, websocket.MessageBinary, msg)
 		if err != nil {
 			log.Printf("error send: %v", err)
 			cancel()
@@ -174,8 +177,17 @@ func New(ctx context.Context, cancel context.CancelFunc, port string, sharedArra
 	go func() {
 		var lastStateData []byte
 		var pref float32
-		for {
+		var available bool = true
+		for available {
 			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						err := errors.New("Tried to read closed connection")
+						fmt.Printf("Recovered. %s: %v\n", err.Error(), r)
+						available = false
+						cancel()
+					}
+				}()
 				t, msg, err := logic.conn.Read(ctx)
 				if err != nil {
 					log.Printf("error read: %v", err)
