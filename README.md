@@ -42,6 +42,11 @@ npm i
 npm run dev
 ```
 
+- Dependancies
+  - Linux (or Windows with WSL)
+  - Golang >=1.24.3
+  - Node >= 22.0
+
 - Build for production
 ```bash
 ./build.sh
