@@ -4,22 +4,49 @@ Multiplayer Calculator is a real-time collaborative calculator where multiple us
 
 ## Demo: [https://calculator.vdh.dev/](https://calculator.vdh.dev/)
 
+## Design
+
+```mermaid
+graph TD
+  subgraph Server
+    S[Calculator State and Player Cursors]
+  end
+
+  subgraph Client
+    subgraph Web Worker
+      W[Go WASM]
+      P[State to Local State]
+    end
+
+    B[Shared Buffer]
+
+    subgraph Render
+      C[Canvas]
+    end
+  end
+
+  S -->| Websocket Connection | W
+  W --> P
+  P -->| Server Tick | B
+  B -->| Render Tick | C
+```
+
 ## Technologies Used
 
 - **WebSockets**  
   Enables real-time communication between users by broadcasting calculator state and cursor positions instantly.
 
-- **Web Workers**
+- **Web Workers**  
   Enables game to use multiple cores seperating rendering and logic pipelines. This enables game logic and rendering to not affect one another and is displayed in game with GPU and CPU load counter. 
 
-- **Golang Wasm**  
+- **Golang Wasm**   
   The calculator client business logic is compiled from Go to WebAssembly for high-performance execution directly in the browser.
-  I am never doing this again for a game, its a terrible idea where I ended up in split brain logic where half is in Go and half in Typescript.
+  I am never doing this again for a game, its a terrible idea where it endeds up in split brain where half logic is in Go and half logic in Typescript.
 
 - **Canvas**  
   Used to render the calculator UI and display player cursors, allowing for smooth, interactive graphics without a game engine or the complexity of creating OpenGL.
 
-- **Multilingual Stateless Binary Encoding**
+- **Multilingual Stateless Binary Encoding**  
   This project implements a stateless binary encoder/decoder that, on average, produces output 35% the size of equivalent JSON encoding. On top of this it supports an optional flag to Zstd compress the data for an even smaller footprint. I based the encoding on ASN.1, but it specifically targets types available in both Go and Typescript enabling cross platform communication.
 
 ## Development
