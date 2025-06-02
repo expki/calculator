@@ -13,6 +13,11 @@ import (
 	"github.com/expki/calculator/lib/schema"
 )
 
+var (
+	regexFinalDecimal = regexp.MustCompile(`\d+(\.\d+)?$`)
+	regexFinalBracket = regexp.MustCompile(`\)$`)
+)
+
 func (s *Session) Calculate() (display string) {
 	expr := s.state.Calculator.Equation
 	if expr == "" {
@@ -26,20 +31,18 @@ func (s *Session) Calculate() (display string) {
 	// 2. Parse the expression into an AST
 	node, err := parser.ParseExpr(expr)
 	if err != nil {
-		return "Error"
+		return "Parse Error"
 	}
 
 	// 3. Evaluate the AST
 	result, err := evalAST(node)
 	if err != nil {
-		return "Error"
+		return "Evaluate Error"
 	}
 
 	// 4. Convert to string
 	return formatFloatClean(result)
 }
-
-var regexFinalDecimal = regexp.MustCompile(`\d+(\.\d+)?$`)
 
 func (s *Session) handleUserInput(userIn schema.Input) {
 	for idx, member := range s.state.Members {
@@ -126,8 +129,14 @@ func (s *Session) handlePercentage(member *schema.MemberState, userIn schema.Inp
 }
 
 func (s *Session) handleOperator(member *schema.MemberState, userIn schema.Input) {
+	addPrefix := func() {
+		if !regexFinalDecimal.MatchString(s.state.Calculator.Equation) && !regexFinalBracket.MatchString(s.state.Calculator.Equation) {
+			s.state.Calculator.Equation += "0"
+		}
+	}
 	if member.Divide != userIn.Divide {
 		if userIn.Divide {
+			addPrefix()
 			s.state.Calculator.Display = ""
 			s.state.Calculator.Equation += "÷"
 		}
@@ -135,6 +144,7 @@ func (s *Session) handleOperator(member *schema.MemberState, userIn schema.Input
 	}
 	if member.Times != userIn.Times {
 		if userIn.Times {
+			addPrefix()
 			s.state.Calculator.Display = ""
 			s.state.Calculator.Equation += "×"
 		}
@@ -142,6 +152,7 @@ func (s *Session) handleOperator(member *schema.MemberState, userIn schema.Input
 	}
 	if member.Minus != userIn.Minus {
 		if userIn.Minus {
+			addPrefix()
 			s.state.Calculator.Display = ""
 			s.state.Calculator.Equation += "-"
 		}
@@ -149,6 +160,7 @@ func (s *Session) handleOperator(member *schema.MemberState, userIn schema.Input
 	}
 	if member.Plus != userIn.Plus {
 		if userIn.Plus {
+			addPrefix()
 			s.state.Calculator.Display = ""
 			s.state.Calculator.Equation += "+"
 		}
@@ -217,7 +229,11 @@ func (s *Session) handleEquals(member *schema.MemberState, userIn schema.Input) 
 	if member.Equals != userIn.Equals {
 		if userIn.Equals {
 			s.state.Calculator.Display = s.Calculate()
-			s.state.Calculator.Equation = ""
+			if strings.HasSuffix(s.state.Calculator.Display, "Error") {
+				s.state.Calculator.Equation = ""
+			} else {
+				s.state.Calculator.Equation = s.state.Calculator.Display
+			}
 		}
 		member.Equals = userIn.Equals
 	}
